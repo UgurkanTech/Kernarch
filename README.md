@@ -1,4 +1,4 @@
-# KernArch
+# Kernarch - created by Uğurkan Hoşgör
 
 This is a work-in-progress operating system kernel being developed with a specific purpose in mind. As part of an ongoing journey in OS development, it's a creative playground where new concepts and skills are discovered.
 
@@ -7,14 +7,18 @@ This is a work-in-progress operating system kernel being developed with a specif
 - 32-bit protected mode
 - Global Descriptor Table (GDT)
 
-## Upcoming Features
 
-- Interrupts
-- C runtime
-- VGA features
-- File systems
-- Devices
-- GUI
+## Upcoming Features - WIP
+
+- Basic Memory Management
+- Interrupt Handling
+- C runtime Integration
+- VGA Display Features
+- File System Support
+- Device Drivers
+- Graphical User Interface (GUI)
+- Networking Capabilities
+- Multitasking Support
 
 ## Building
 
