@@ -1,0 +1,12 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "NASM build and run QEMU",
+            "type": "node",
+            "request": "launch",
+            "runtimeExecutable": "bash",
+            "args": ["-c", "nasm -f bin -o kernel.bin kernel.asm && qemu-system-x86_64 -serial stdio -drive format=raw,file=kernel.bin"]
+        }
+    ]
+}
