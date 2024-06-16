@@ -1,6 +1,6 @@
 # KernArch
 
-KernArch is a work-in-progress operating system kernel with a specific purpose. It's currently being built with NASM and tested with QEMU.
+This is a work-in-progress operating system kernel being developed with a specific purpose in mind. As part of an ongoing journey in OS development, it's a creative playground where new concepts and skills are discovered.
 
 ## Current Features
 
