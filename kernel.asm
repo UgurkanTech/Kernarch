@@ -13,9 +13,33 @@ _start:
     mov ss, ax     ; Set stack segment to 0x9000
     mov sp, 0xFFFF ; Set stack pointer to 0xFFFF (top of the stack)
     
-    mov si, hello
+    ;Clear the screen
+    mov ah, 0x06 ; Function 0x06 of interrupt 0x10 scrolls the window up
+    mov al, 0x00 ; Number of lines to scroll up (0 clears the window)
+    mov bh, 0x07 ; Attribute byte (0x07 is light gray on black)
+    mov cx, 0x00 ; Upper left corner of the window
+    mov dx, 0x184F ; Lower right corner of the window (80x25 screen)
+    int 0x10 ; Call video interrupt
+    ; Move the cursor to the top left corner
+    mov ah, 0x02 ; Function 0x02 of interrupt 0x10 sets cursor position
+    mov bh, 0x00 ; Page number (usually 0)
+    mov dh, 0x00 ; Row
+    mov dl, 0x00 ; Column
+    int 0x10 ; Call video interrupt
+
+    mov si, helloreal
     call print_string
-    
+
+    ; Move the cursor to the top left corner
+    mov ah, 0x02 ; Function 0x02 of interrupt 0x10 sets cursor position
+    mov bh, 0x00 ; Page number (usually 0)
+    mov dh, 0x01 ; Row
+    mov dl, 0x00 ; Column
+    int 0x10 ; Call video interrupt
+
+    mov si, helloreal2
+    call print_string
+
     call switch_16_to_32
     
     jmp $
@@ -61,47 +85,63 @@ init32:
     mov ss, ax
 
     ; Now in 32-bit mode
+
     ; Print message in protected mode to verify switch
+    mov esi, helloswitch
+    mov bx, 0x03
+    mov ch, WHITE_ON_BLACK
+    call print_string32
+
     mov esi, hello32
+    mov bx, 0x04
+    mov ch, GREEN_ON_BLACK
     call print_string32
 
     ; Infinite loop to halt the system
     .loop:
         jmp .loop
 
-print_string32:
-    ; Clear the screen
-    mov edi, VIDEO_MEMORY
-    mov ecx, SCREEN_SIZE
-    mov ax, ' ' | (WHITE_ON_BLACK << 8)
-.clear_screen:
-    dec ecx
-    js .done_clear
-    mov [edi], ax
-    add edi, 2
-    jmp .clear_screen
-.done_clear:
+clear_screen:
+    .init:
+        ; Clear the screen
+        mov edi, VIDEO_MEMORY
+        mov ecx, SCREEN_SIZE
+        mov ax, ' ' | (WHITE_ON_BLACK << 8)
+    .clear_screen:
+        dec ecx
+        js .done_clear
+        mov [edi], ax
+        add edi, 2
+        jmp .clear_screen
+    .done_clear:
+        ret
 
+print_string32:
     ; Print the string
     mov edi, VIDEO_MEMORY
-    mov esi, hello32
-.loop32:
-    mov al, [esi]
-    cmp al, 0
-    je .done32
-    mov ah, GREEN_ON_BLACK
-    mov [edi], ax
-    add esi, 1
-    add edi, 2
-    jmp .loop32
-.done32:
-    ret
+    movzx eax, bx ; Extend bx to 32 bits
+    imul eax, 80 ; Multiply by 80
+    shl eax, 1 ; Multiply by 2 (equivalent to eax = eax * 2)
+    add edi, eax ; Add to edi
+    .loop32:
+        mov al, [esi]
+        cmp al, 0
+        je .done32
+        mov ah, ch
+        mov [edi], ax
+        add esi, 1
+        add edi, 2
+        jmp .loop32
+    .done32:
+        ret
 
 ; GDT
 %include "gdt.asm"
 
-hello db 'Hello world!', 0x0a, 0
-hello32 db 'Hello from Protected Mode!', 0x0a, 0
+helloreal db 'Kernarch started from Real Mode!', 0x0a, 0
+helloreal2 db 'Switching to Protected Mode..', 0x0a, 0
+helloswitch db 'Protected mode Enabled!', 0
+hello32 db 'Hello from Protected Mode!', 0
 VIDEO_MEMORY equ 0xB8000
 WHITE_ON_BLACK equ 0x0F
 GREEN_ON_BLACK equ 0x02
