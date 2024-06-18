@@ -1,5 +1,8 @@
 [bits 32]
 extern kernel_main
+extern gdt_descriptor
+extern CODE_SEG
+extern DATA_SEG
 
 ;multiboot header.
 MBALIGN  equ  1 << 0            ; align loaded modules on page boundaries
@@ -24,6 +27,9 @@ _start:
     mov esp, stack_top
     
     call init32
+
+    ; Call kernel_main
+    call kernel_main
 _start.end:
     hlt
 
@@ -33,15 +39,26 @@ _start.end:
     jmp .hang
 
 init32:
+    ; Load the GDT
+    lgdt [gdt_descriptor]
+
+    ; Update the segment registers
+    jmp CODE_SEG:.flush
+
+.flush:
+    mov ax, DATA_SEG
+    mov ds, ax
+    mov es, ax
+    mov fs, ax
+    mov gs, ax
+    mov ss, ax
+
+.print:
     ; Set up video memory for message output
     mov esi, hello32
     mov bx, 0x01  ; line
     mov ch, GREEN_ON_BLACK
     call print_string32
-
-    ; Call kernel_main
-    call kernel_main
-
     ret
 
 clear_screen:
