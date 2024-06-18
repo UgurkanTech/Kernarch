@@ -28,7 +28,7 @@ This is a work-in-progress operating system kernel being developed with a specif
 The ISO is built using Docker and upon successful completion, the ISO file will be created in the output directory. To initiate the process, the start.sh script is run.
 
 ```bash
-./start.sh
+./build.sh
 ```
 
 Once the ISO is built, it will be tested using QEMU. Please ensure QEMU is installed on your host machine. 
