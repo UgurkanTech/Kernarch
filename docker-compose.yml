@@ -1,0 +1,9 @@
+version: '3.8'
+services:
+  kernarch:
+    platform: linux/i386
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - ./output:/output

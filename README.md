@@ -4,15 +4,16 @@ This is a work-in-progress operating system kernel being developed with a specif
 
 ## Current Features
 
+- GRUB bootloader
 - 32-bit protected mode
 - Global Descriptor Table (GDT)
+- C runtime Integration
 
 
 ## Upcoming Features - WIP
 
 - Basic Memory Management
 - Interrupt Handling
-- C runtime Integration
 - VGA Display Features
 - File System Support
 - Device Drivers
@@ -20,32 +21,35 @@ This is a work-in-progress operating system kernel being developed with a specif
 - Networking Capabilities
 - Multitasking Support
 
-## Building
+## Building ISO with Docker and testing with QEMU
 
-Currently, the project is assembled using NASM. Use the following command to assemble the kernel:
+The ISO is built using Docker and upon successful completion, the ISO file will be created in the output directory. To initiate the process, the start.sh script is run.
 
 ```bash
-nasm -f bin -o kernel.bin kernel.asm 
+./start.sh
 ```
+
+Once the ISO is built, it will be tested using QEMU. Please ensure QEMU is installed on your host machine. 
+
 
 ## Testing with Qemu
 
-To test the project, use QEMU. Run the assembled kernel binary with the following command:
+To test purposes, use QEMU. Run the assembled kernel binary with the following command:
 
 ```bash
-qemu-system-x86_64 -serial stdio -drive format=raw,file=kernel.bin
+qemu-system-x86_64 -cdrom output/KernarchOS.iso
 ```
 
-## TODO - Building with C lang
+## Manuel building and linking
 
-In the future, the project will be compiled with GCC and linked together to create the final kernel binary. The commands for this are not yet finalized, but it will involve steps similar to the following:
+Manual building and linking is not recommended. However, if needed, the assembly can be done with NASM and the compilation with GCC as shown below:
 
 ```bash
 # Assemble with NASM
 nasm -f elf32 boot.asm -o boot.o
 
 # Compile with GCC
-gcc -m32 -c kernel.c -o kernel.o
+gcc -m32 -c kernel.cpp -o kernel.o
 
 # Link with ld
 ld -m elf_i386 -T link.ld -o kernel.bin boot.o kernel.o
