@@ -4,7 +4,10 @@ This is a work-in-progress operating system kernel being developed with a specif
 
 <img width="456" alt="Screenshot at Jun 16 19-41-07" src="https://github.com/UgurkanTech/Kernarch/assets/39236929/0db862e3-89a0-43b3-bb7d-c9b6362714a5">
 
+
 ## Current Features
+
+Project Status: [■■-----------------------------] 10% Complete
 
 - GRUB bootloader
 - 32-bit protected mode
