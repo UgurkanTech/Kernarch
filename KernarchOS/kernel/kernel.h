@@ -9,5 +9,7 @@
 #include "memory.h"
 #include "io.h"
 #include "idt.h"
+#include "paging.h"
+#include "keyboard.h"
 
 #endif // KERNEL_H

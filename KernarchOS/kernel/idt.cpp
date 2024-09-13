@@ -1,11 +1,5 @@
 #include "idt.h"
-
-// Declare an IDT of 256 entries. Although we will only use the
-// first 32 entries in this tutorial, the rest exists as a bit
-// of a trap. If any undefined IDT entry is hit, it normally
-// will cause an "Unhandled Interrupt" exception. Any descriptor
-// for which the 'presence' bit is cleared (0) will generate an
-// "Unhandled Interrupt" exception.
+#include "isr.h"
 
 // Define idt_entries and idt_ptr
 IDTEntry idt_entries[IDT_SIZE];
@@ -24,27 +18,24 @@ extern "C" void idt_set_gate(uint8_t num, uint32_t base, uint16_t selector, uint
     idt_entries[num].flags = flags;
 }
 
-// Define isr0 and isr1
-extern "C" void isr0() {
-    // ISR handler code goes here
-}
-
-extern "C" void isr1() {
-    // ISR handler code goes here
-}
-
-// Initialization of IDT
 extern "C" void idt_init() {
-    idt_ptr.limit = sizeof(IDTEntry) * IDT_SIZE - 1;
+    idt_ptr.limit = sizeof(IDTEntry) * 256 - 1;
     idt_ptr.base = (uint32_t)&idt_entries;
 
-    // Clear out the entire IDT, initializing it to zeros
-    memset(&idt_entries, 0, sizeof(IDTEntry) * IDT_SIZE);
+    std::memset(&idt_entries, 0, sizeof(IDTEntry) * 256);
 
-    // Add any new ISRs to the IDT here using idt_set_gate
-    idt_set_gate(0, (uint32_t)isr0, 0x08, 0x8E);
-    idt_set_gate(1, (uint32_t)isr1, 0x08, 0x8E);
+    // Set up ISRs (0-31)
+    for (int i = 0; i < 32; i++) {
+        idt_set_gate(i, (uint32_t)isr_stub_table[i], 0x08, 0x8E);
+    }
 
-    // Points the processor's internal register to the new IDT
+    // Remap the PIC
+    pic_remap(0x20, 0x28);
+
+    // Set up software interrupts (32-255)
+    for (int i = 32; i < 256; i++) {
+        idt_set_gate(i, (uint32_t)isr_stub_table[i], 0x08, 0x8E);
+    }
+
     idt_flush((uint32_t)&idt_ptr);
 }

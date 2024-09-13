@@ -2,7 +2,7 @@
 #define IDT_H
 
 #include <stdint.h>
-#include "memory.h"
+#include "cstring.h"
 
 
 #define IDT_SIZE 256

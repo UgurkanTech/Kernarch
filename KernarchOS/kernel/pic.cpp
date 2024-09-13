@@ -1,5 +1,6 @@
 #include "pic.h"
 #include "io.h"
+#include "terminal.h"
 
 void pic_remap(int offset1, int offset2) {
     unsigned char a1, a2;
@@ -31,5 +32,12 @@ void pic_sendEOI(uint8_t irq) {
 }
 
 void pic_init() {
+    term_print("Initializing PIC...\n");
     pic_remap(0x20, 0x28);
+    
+    // mask all interrupts
+    outb(PIC1_DATA, 0x00);
+    outb(PIC2_DATA, 0x00);
+    
+    term_print("PIC initialized\n");
 }

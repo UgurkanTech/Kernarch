@@ -2,6 +2,7 @@ ENTRY(_start)
 
 KERNEL_START = 0x100000;
 
+
 SECTIONS
 {
   . = KERNEL_START;

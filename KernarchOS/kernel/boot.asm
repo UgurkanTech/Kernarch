@@ -107,8 +107,13 @@ WHITE_ON_BLACK equ 0x0F
 GREEN_ON_BLACK equ 0x02
 SCREEN_SIZE equ 4000 ; 80 columns * 25 rows * 2 bytes per cell
 
+global KERNEL_STACK_SIZE
+KERNEL_STACK_SIZE equ 65536  ; 64 KB
+
 section .bss
 align 16
+global stack_bottom
 stack_bottom:
-    resb 16384  ; 16 KiB stack
+    resb KERNEL_STACK_SIZE
+global stack_top
 stack_top:

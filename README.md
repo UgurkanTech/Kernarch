@@ -7,24 +7,33 @@ This is a work-in-progress operating system kernel being developed with a specif
 
 ## Current Features
 
-Project Status: [■■-----------------------------] 10% Complete
+Project Status: [■■■■■■■■■■■■--------------------] 35% Complete
 
 - GRUB bootloader
 - 32-bit protected mode
 - Global Descriptor Table (GDT)
 - C runtime Integration
+- Basic Memory Management
+- Interrupt Handling
+- VGA Display Features
+- Keyboard Handling
+- Shell Implementation
+- Paging
+- PIC (Programmable Interrupt Controller)
+- IDT (Interrupt Descriptor Table)
+- ISRs (Interrupt Service Routines)
 
 
 ## Upcoming Features - WIP
 
-- Basic Memory Management
-- Interrupt Handling
-- VGA Display Features
 - File System Support
 - Device Drivers
 - Graphical User Interface (GUI)
 - Networking Capabilities
 - Multitasking Support
+- Process Scheduling
+- System Calls
+- User Mode
 
 ## Building ISO with Docker and testing with QEMU
 
