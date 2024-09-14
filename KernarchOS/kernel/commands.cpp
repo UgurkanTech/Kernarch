@@ -7,43 +7,61 @@
 
 using namespace std;
 
+Command Commands::command_list[MAX_COMMANDS];
+int Commands::command_count = 0;
+
+void Commands::initialize() {
+    add_command("echo", "[text]", "Print the given text", echo);
+    add_command("help", "", "Display this help message", [](const char*) { help(); });
+    add_command("clear", "", "Clear the screen", clear);
+    add_command("meminfo", "", "Display memory information", meminfo);
+    add_command("systeminfo", "", "Display system information", systeminfo);
+    add_command("shutdown", "", "Shut down the system", shutdown);
+}
+
+void Commands::add_command(const char* name, const char* args, const char* description, void (*function)(const char*)) {
+    if (command_count < MAX_COMMANDS) {
+        command_list[command_count] = {name, args, description, function};
+        command_count++;
+    }
+}
+
 void Commands::execute(const char* command) {
-    if (strncmp(command, "echo ", 5) == 0) {
-        echo(command + 5);
-    } else if (strcmp(command, "help") == 0) {
-        help();
-    } else if (strcmp(command, "clear") == 0) {
-        clear();
-    } else if (strcmp(command, "meminfo") == 0) {
-        meminfo();
-    } else if (strcmp(command, "shutdown") == 0) {
-        shutdown();
-    } else if (strcmp(command, "systeminfo") == 0) {
-        systeminfo();
-    } else {
-        term_print("Unknown command: ");
-        term_print(command);
+    for (int i = 0; i < command_count; i++) {
+        size_t cmd_len = strlen(command_list[i].name);
+        if (strncmp(command, command_list[i].name, cmd_len) == 0 && (command[cmd_len] == ' ' || command[cmd_len] == '\0')) {
+            command_list[i].function(command + cmd_len + 1);
+            return;
+        }
+    }
+    term_print_colored("Unknown command: ", VGA_LIGHT_RED);
+    term_print(command);
+    term_print("\n");
+}
+
+void Commands::help() {
+    term_print_colored("Available commands:\n", VGA_YELLOW);
+    for (int i = 0; i < command_count; i++) {
+        term_print("  ");
+        term_print_colored(command_list[i].name, VGA_LIGHT_GREEN);
+        if (strlen(command_list[i].args) > 0) {
+            term_print(" ");
+            term_print_colored(command_list[i].args, VGA_LIGHT_CYAN);
+        }
+        term_print(" - ");
+        term_print_colored(command_list[i].description, VGA_WHITE);
         term_print("\n");
     }
 }
 
-
+// Implement your command functions here
 void Commands::echo(const char* args) {
     term_print(args);
     term_print("\n");
 }
 
-void Commands::help() {
-    term_print("Available commands:\n");
-    term_print("  echo [text] - Print the given text\n");
-    term_print("  help - Display this help message\n");
-    term_print("  clear - Clear the screen\n");
-    term_print("  meminfo - Display memory information\n");
-    term_print("  systeminfo - Display system information\n");
-    term_print("  shutdown - Shut down the system\n");
-}
 
-void Commands::systeminfo() {
+void Commands::systeminfo(const char*) {
     ACPI acpi;
     if (acpi.initialize()) {
         acpi.print_system_info();
@@ -52,15 +70,18 @@ void Commands::systeminfo() {
     }
 }
 
-void Commands::clear() {
+void Commands::clear(const char* args) {
+    (void)args;
     term_clear();
 }
 
-void Commands::meminfo() {
+void Commands::meminfo(const char* args) {
+    (void)args;
     print_memory_info();
 }
 
-void Commands::shutdown() {
+void Commands::shutdown(const char* args) {
+    (void)args;
     term_print("Shutting down...\n");
 
     // Try ACPI shutdown

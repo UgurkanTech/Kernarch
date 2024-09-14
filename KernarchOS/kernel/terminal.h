@@ -4,21 +4,6 @@
 #include <stddef.h>
 #include <stdint.h>
 
-void term_init();
-void term_putc(char c);
-void term_print(const char* str);
-void term_print_int(int value);
-void term_print_uint(unsigned int n);
-void term_print_hex(uint32_t value);
-void term_backspace();
-void term_clear();
-void term_input(char c);
-void term_process_command();
-void set_text_color(uint8_t color);
-void set_text_bg_color(uint8_t color);
-
-uint8_t get_terminal_color();
-
 enum vga_color {
     VGA_BLACK = 0,
     VGA_BLUE = 1,
@@ -37,5 +22,22 @@ enum vga_color {
     VGA_YELLOW = 14,
     VGA_WHITE = 15,
 };
+
+void term_init();
+void term_putc(char c);
+void term_print(const char* str);
+void term_print_int(int value);
+void term_print_uint(unsigned int n);
+void term_print_hex(uint32_t value);
+void term_backspace();
+void term_clear();
+void term_input(char c);
+void term_process_command();
+void set_text_color(uint8_t color);
+void set_text_bg_color(uint8_t color);
+
+void term_print_colored(const char* str, vga_color fg_color, vga_color bg_color = VGA_BLACK);
+
+uint8_t get_terminal_color();
 
 #endif // TERMINAL_H

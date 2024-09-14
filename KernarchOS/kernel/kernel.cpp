@@ -8,6 +8,7 @@
 #include "paging.h"
 #include "keyboard.h"
 #include "logger.h"
+#include "commands.h"
 
 extern "C" void kernel_main() {
 
@@ -49,6 +50,8 @@ extern "C" void kernel_main() {
     asm volatile ("sti");
     
     Logger::info("Interrupts enabled");
+
+    Commands::initialize();
 
     Logger::info("Kernel initialization complete");
 

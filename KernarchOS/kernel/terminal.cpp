@@ -208,6 +208,14 @@ void term_clear() {
     update_cursor();
 }
 
+void term_print_colored(const char* str, vga_color fg_color, vga_color bg_color) {
+    uint8_t old_color = get_terminal_color();
+    set_text_color(fg_color);
+    set_text_bg_color(bg_color);
+    term_print(str);
+    term_color = old_color;
+}
+
 
 void set_text_color(uint8_t color)
 {
@@ -223,3 +231,4 @@ uint8_t get_terminal_color()
 {
     return term_color;
 }
+
