@@ -2,7 +2,7 @@
 
 This is a work-in-progress operating system kernel being developed with a specific purpose in mind. As part of an ongoing journey in OS development, it's a creative playground where new concepts and skills are discovered.
 
-![image](https://github.com/user-attachments/assets/2c76ec33-cc93-4619-9040-22a9cd75cced)
+![image](https://github.com/user-attachments/assets/291c86fc-21fc-4c7c-b5d6-f00b59255eac)
 
 
 
