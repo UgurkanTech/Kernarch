@@ -7,42 +7,50 @@
 #include "memory.h"
 #include "paging.h"
 #include "keyboard.h"
+#include "logger.h"
 
 extern "C" void kernel_main() {
+
     term_init();
-    term_print("Initializing kernel...\n");
+
+    Logger::init();
+    Logger::set_log_level(LOG_INFO);
+
+    Logger::info("Initializing kernel...");
 
     idt_init();
-    term_print("IDT initialized\n");
+
+    Logger::info("IDT initialized");
 
     isr_install();
-    term_print("ISRs installed\n");
+    
+    Logger::info("ISRs installed");
 
-    term_print("About to initialize PIC...\n");
     pic_init();
-    term_print("PIC initialized\n");
+    
+    Logger::info("PIC initialized");
 
-    term_print("About to initialize paging...\n");
     init_paging();
-    term_print("Paging initialized\n");
+    
+    Logger::info("Paging initialized");
 
-
-
-    term_print("About to initialize memory...\n");
     init_memory();
-    term_print("Memory initialized\n");
+    
+    Logger::info("Memory initialized");
 
-    print_heap_info();
+    set_text_color(VGA_YELLOW);
+    print_memory_info();
+    set_text_color(VGA_WHITE);
 
-    term_print("About to initialize PIT...\n");
     pit_init(1000); // 1ms tick
-    term_print("PIT initialized\n");
-    // Enable interrupts
-    term_print("About to enable interrupts...\n");
-    asm volatile ("sti");
-    term_print("Interrupts enabled\n");
+    
+    Logger::info("PIT initialized");
 
-    term_print("Kernel initialization complete\n");
+    asm volatile ("sti");
+    
+    Logger::info("Interrupts enabled");
+
+    Logger::info("Kernel initialization complete");
 
     term_print("Welcome to KernarchOS!\n");
     term_print("> ");

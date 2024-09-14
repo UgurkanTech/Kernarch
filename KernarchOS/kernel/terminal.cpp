@@ -34,7 +34,7 @@ void term_init()
             vga_buffer[index] = ((uint16_t)term_color << 8) | ' ';
         }
     }
-        term_col = 0;
+    term_col = 0;
     term_row = 0;
     update_cursor();
 }
@@ -206,4 +206,20 @@ void term_clear() {
     term_col = 0;
     term_row = 0;
     update_cursor();
+}
+
+
+void set_text_color(uint8_t color)
+{
+    term_color = (term_color & 0xF0) | (color & 0x0F);
+}
+
+void set_text_bg_color(uint8_t color)
+{
+    term_color = (term_color & 0x0F) | ((color & 0x0F) << 4);
+}
+
+uint8_t get_terminal_color()
+{
+    return term_color;
 }
