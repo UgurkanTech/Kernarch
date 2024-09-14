@@ -2,7 +2,8 @@
 
 This is a work-in-progress operating system kernel being developed with a specific purpose in mind. As part of an ongoing journey in OS development, it's a creative playground where new concepts and skills are discovered.
 
-<img width="456" alt="Screenshot at Jun 16 19-41-07" src="https://github.com/UgurkanTech/Kernarch/assets/39236929/0db862e3-89a0-43b3-bb7d-c9b6362714a5">
+![image](https://github.com/user-attachments/assets/2c76ec33-cc93-4619-9040-22a9cd75cced)
+
 
 
 ## Current Features
