@@ -3,12 +3,10 @@
 #include "interrupts.h"
 #include "cstring.h"
 #include <stdint.h>
+#include "kernel_config.h"
 
 using namespace std;
 
-// Define the actual variables
-const uint32_t heap_start = HEAP_START_ADDRESS;
-const uint32_t heap_end = HEAP_END_ADDRESS;
 
 #define ALIGN_UP(num, align) (((num) + ((align) - 1)) & ~((align) - 1))
 #define MIN_BLOCK_SIZE 16
@@ -25,8 +23,8 @@ static block_meta* heap_start_block = nullptr;
 void init_memory() {
     term_print("Initializing memory...\n");
 
-    heap_start_block = (block_meta*)heap_start;
-    size_t heap_size = heap_end - heap_start;
+    heap_start_block = (block_meta*)&heap_start;
+    size_t heap_size = (size_t)((uintptr_t)&heap_end - (uintptr_t)&heap_start);
 
     heap_start_block->size = heap_size - sizeof(block_meta);
     heap_start_block->free = true;
@@ -163,16 +161,15 @@ void print_heap_info() {
     term_print(" bytes\n");
 }
 
-#include "kernel_config.h"
 
 uint32_t get_stack_usage() {
     uint32_t esp;
     asm volatile("mov %%esp, %0" : "=r" (esp));
-    return (uint32_t)(&stack_top - (uint32_t*)esp);
+    return (uint32_t)&stack_top - esp;
 }
 
 uint32_t get_total_stack_size() {
-    return (uint32_t)(&stack_top - &stack_bottom);
+    return (uint32_t)&stack_top - (uint32_t)&stack_bottom;
 }
 
 void print_memory_info(){
@@ -191,55 +188,71 @@ void print_memory_info(){
         }
         current = current->next;
     }
+
+    size_t total_heap_size = (size_t)((uintptr_t)&heap_end - (uintptr_t)&heap_start);
+    size_t managed_memory = free_memory + used_memory;
+
+    term_print("  Total Heap Size: ");
+    term_print_int(total_heap_size / (1024 * 1024));
+    term_print(" MB\n");
+
+    term_print("  Managed Memory: ");
+    term_print_int(managed_memory / (1024 * 1024));
+    term_print(" MB\n");
+
     term_print("  Blocks: ");
     term_print_int(block_count);
+    term_print("\n");
 
-    term_print("\n  Used: ");
-    
-    if (used_memory > 1024 * 1024) {
-        term_print_int(used_memory / 1024 / 1024);
-        term_print(" MB\n");
-    } else if (used_memory > 1024) {
-        term_print_int(used_memory / 1024);
-        term_print(" KB\n");
-    } else {
-        term_print_int(used_memory);
-        term_print(" bytes\n");
-    }
-
+    term_print("  Used: ");
+    term_print_int(used_memory / (1024 * 1024));
+    term_print(" MB\n");
 
     term_print("  Free: ");
-    if (free_memory > 1024 * 1024) {
-        term_print_int(free_memory / 1024 / 1024);
+    term_print_int(free_memory / (1024 * 1024));
+    term_print(" MB\n");
+
+    if (managed_memory < total_heap_size) {
+        term_print("  Unmanaged: ");
+        term_print_int((total_heap_size - managed_memory) / (1024 * 1024));
         term_print(" MB\n");
-    } else if (free_memory > 1024) {
-        term_print_int(free_memory / 1024);
-        term_print(" KB\n");
-    } else {
-        term_print_int(free_memory);
-        term_print(" bytes\n");
     }
 
-
-    term_print("  Total: ");
-    size_t total_memory = free_memory + used_memory;
-    if (total_memory > 1024 * 1024) {
-        term_print_int(total_memory / 1024 / 1024);
-        term_print(" MB\n");
-    } else if (total_memory > 1024) {
-        term_print_int(total_memory / 1024);
-        term_print(" KB\n");
-    } else {
-        term_print_int(total_memory);
-        term_print(" bytes\n");
-    }
-
-    term_print("Stack info: \n  Used: ");
+    term_print("Stack info:\n  Used: ");
     term_print_int(get_stack_usage());
     term_print(" bytes\n  Total: ");
     term_print_int(get_total_stack_size());
     term_print(" bytes\n");
-
-
 }
 
+// Global new and delete operators
+void* operator new(size_t size) noexcept {
+    return kmalloc(size);
+}
+
+void* operator new[](size_t size) noexcept {
+    return kmalloc(size);
+}
+
+void operator delete(void* ptr) noexcept {
+    kfree(ptr);
+}
+
+void operator delete[](void* ptr) noexcept {
+    kfree(ptr);
+}
+
+void operator delete(void* ptr, size_t size) noexcept {
+    (void)size;
+    kfree(ptr);
+}
+
+void operator delete[](void* ptr, size_t size) noexcept {
+    (void)size;
+    kfree(ptr);
+}
+
+// Placement new
+void* operator new(size_t, void* ptr) noexcept {
+    return ptr;
+}

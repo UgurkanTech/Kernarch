@@ -9,13 +9,16 @@
 #include "keyboard.h"
 #include "logger.h"
 #include "commands.h"
+#include "acpi.h"
+#include "cstring.h"
+
 
 extern "C" void kernel_main() {
 
     term_init();
 
     Logger::init();
-    Logger::set_log_level(LOG_INFO);
+    Logger::set_log_level(INFO);
 
     Logger::info("Initializing kernel...");
 
@@ -32,11 +35,11 @@ extern "C" void kernel_main() {
     Logger::info("PIC initialized");
 
     init_paging();
-    
+
     Logger::info("Paging initialized");
 
     init_memory();
-    
+
     Logger::info("Memory initialized");
 
     set_text_color(VGA_YELLOW);
@@ -53,11 +56,15 @@ extern "C" void kernel_main() {
 
     Commands::initialize();
 
+    ACPI::initialize();
+
+    ACPI::instance()->scan_drives();
+
     Logger::info("Kernel initialization complete");
+
 
     term_print("Welcome to KernarchOS!\n");
     term_print("> ");
-
     // Main kernel loop
     while (true) {
         char c = Keyboard::get_char();

@@ -25,6 +25,7 @@ extern PageTable kernel_page_table;
 
 void init_paging();
 bool map_page(uint32_t virtual_address, uint32_t physical_address, bool is_writable);
+void setup_stack_guard_region();
 void enable_paging();
 
 #endif // PAGING_H

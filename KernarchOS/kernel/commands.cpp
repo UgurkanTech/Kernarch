@@ -62,12 +62,8 @@ void Commands::echo(const char* args) {
 
 
 void Commands::systeminfo(const char*) {
-    ACPI acpi;
-    if (acpi.initialize()) {
-        acpi.print_system_info();
-    } else {
-        term_print("Failed to initialize ACPI\n");
-    }
+    ACPI::instance()->print_system_info();
+    ACPI::instance()->print_drive_info();
 }
 
 void Commands::clear(const char* args) {

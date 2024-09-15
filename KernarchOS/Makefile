@@ -2,7 +2,7 @@
 AS=nasm
 LD=ld
 CC=gcc
-CFLAGS=-m32 -ffreestanding -O2 -Wall -Wextra -MMD -c -g -fno-exceptions -fno-rtti
+CFLAGS=-m32 -ffreestanding -O1 -Wall -Wextra -MMD -c -g -fno-exceptions -fno-rtti -std=c++17
 LDFLAGS=-T linker.ld -nostdlib -m elf_i386
 ASFLAGS=-felf32
 KERNEL=kernel.bin

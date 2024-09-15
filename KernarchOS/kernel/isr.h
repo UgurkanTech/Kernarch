@@ -18,6 +18,8 @@ extern "C" void (*isr_stub_table[])();
 extern "C" void isr_install();
 extern "C" void isr_handler(interrupt_frame* frame);
 
+
+
 // CPU Exceptions
 enum CPUException {
     EXC_DIVIDE_ERROR = 0,

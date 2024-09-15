@@ -4,17 +4,17 @@
 #include "terminal.h"
 
 enum LogLevel {
-    LOG_DEBUG,
-    LOG_INFO,
-    LOG_WARNING,
-    LOG_ERROR,
-    LOG_CRITICAL
+    DEBUG,
+    INFO,
+    WARNING,
+    ERROR,
+    CRITICAL
 };
 
 class Logger {
 public:
     static void init() {
-        set_log_level(LOG_INFO); // Default log level
+        set_log_level(INFO); // Default log level
     }
 
     static void set_log_level(LogLevel level) {
@@ -33,54 +33,54 @@ public:
     }
 
     static void debug(const char* message) {
-        log(LOG_DEBUG, message);
+        log(DEBUG, message);
     }
 
     static void info(const char* message) {
-        log(LOG_INFO, message);
+        log(INFO, message);
     }
 
     static void warning(const char* message) {
-        log(LOG_WARNING, message);
+        log(WARNING, message);
     }
 
     static void error(const char* message) {
-        log(LOG_ERROR, message);
+        log(ERROR, message);
     }
 
     static void critical(const char* message) {
-        log(LOG_CRITICAL, message);
+        log(CRITICAL, message);
     }
 
 private:
-    static LogLevel current_log_level;
+    static inline LogLevel current_log_level = INFO; 
 
     static const char* get_level_prefix(LogLevel level) {
         switch (level) {
-            case LOG_DEBUG:   return "[DEBUG] ";
-            case LOG_INFO:    return "[INFO] ";
-            case LOG_WARNING: return "[WARNING] ";
-            case LOG_ERROR:   return "[ERROR] ";
-            case LOG_CRITICAL:return "[CRITICAL] ";
-            default:          return "[UNKNOWN] ";
+            case DEBUG:   return "[DEBUG] ";
+            case INFO:    return "[INFO] ";
+            case WARNING: return "[WARNING] ";
+            case ERROR:   return "[ERROR] ";
+            case CRITICAL:return "[CRITICAL] ";
+            default:      return "[UNKNOWN] ";
         }
     }
 
     static void set_log_color(LogLevel level) {
         switch (level) {
-            case LOG_DEBUG:
+            case DEBUG:
                 set_text_color(VGA_LIGHT_GRAY);
                 break;
-            case LOG_INFO:
+            case INFO:
                 set_text_color(VGA_LIGHT_GREEN);
                 break;
-            case LOG_WARNING:
+            case WARNING:
                 set_text_color(VGA_YELLOW);
                 break;
-            case LOG_ERROR:
+            case ERROR:
                 set_text_color(VGA_LIGHT_RED);
                 break;
-            case LOG_CRITICAL:
+            case CRITICAL:
                 set_text_color(VGA_WHITE);
                 set_text_bg_color(VGA_RED);
                 break;
@@ -92,8 +92,5 @@ private:
         set_text_bg_color((color >> 4) & 0x0F);
     }
 };
-
-// Define the static member variables
-LogLevel Logger::current_log_level = LOG_INFO;
 
 #endif // LOGGER_H

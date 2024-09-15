@@ -5,6 +5,8 @@
 #include "terminal.h"
 #include "keyboard.h"
 #include "interrupts.h"
+#include "acpi.h"
+#include "kernel_config.h"
 
 const char* exception_messages[] = {
     "Division By Zero", "Debug", "Non Maskable Interrupt", "Breakpoint",
@@ -19,16 +21,34 @@ void page_fault_handler(interrupt_frame* frame) {
     uint32_t faulting_address;
     asm volatile("mov %%cr2, %0" : "=r" (faulting_address));
 
-    term_print("Page Fault! ( ");
-    if (!(frame->err_code & 0x1)) term_print("present ");
-    if (frame->err_code & 0x2) term_print("read-only ");
-    if (frame->err_code & 0x4) term_print("user-mode ");
-    if (frame->err_code & 0x8) term_print("reserved ");
-    term_print(") at 0x");
+    term_print("FATAL: Page Fault!\n");
+    term_print("Faulting address: 0x");
     term_print_hex(faulting_address);
+    term_print("\nError code: 0x");
+    term_print_hex(frame->err_code);
+    term_print("\nAt EIP: 0x");
+    term_print_hex(frame->eip);
     term_print("\n");
-}
 
+    if (faulting_address >= (uint32_t)&stack_guard_bottom && faulting_address < (uint32_t)&stack_top) {
+        term_print("Stack overflow detected!\n");
+    } else {
+        term_print("General Page Fault ( ");
+        if (!(frame->err_code & 0x1)) term_print("not present ");
+        if (frame->err_code & 0x2) term_print("write ");
+        if (frame->err_code & 0x4) term_print("user-mode ");
+        if (frame->err_code & 0x8) term_print("reserved ");
+        term_print(")\n");
+    }
+
+    term_print("System halted.\n");
+
+    // Disable interrupts and halt the CPU
+    //asm volatile("cli; hlt");
+
+    // In case an NMI wakes the CPU, loop forever
+    for(;;);
+}
 
 extern "C" void isr_handler(interrupt_frame* frame) {
     if (frame->int_no < 32) {
@@ -60,6 +80,12 @@ extern "C" void isr_handler(interrupt_frame* frame) {
                 break;
             case INT_KEYBOARD:
                 Keyboard::handle_interrupt(frame);
+                break;
+            case INT_PRIMARY_ATA:
+                ACPI::instance()->handle_primary_ide_interrupt();
+                break;
+            case INT_SECONDARY_ATA:
+                ACPI::instance()->handle_secondary_ide_interrupt();
                 break;
             default:
                 term_print("Unhandled hardware interrupt: ");
