@@ -2,39 +2,47 @@
 
 This is a work-in-progress operating system kernel being developed with a specific purpose in mind. As part of an ongoing journey in OS development, it's a creative playground where new concepts and skills are discovered.
 
+To streamline the build process, Docker is used to compile the kernel and create .iso images. This approach ensures a consistent and isolated environment, making the development process more efficient and reproducible.
+
 ![image](https://github.com/user-attachments/assets/291c86fc-21fc-4c7c-b5d6-f00b59255eac)
 
 
 
 ## Current Features
 
-Project Status: [■■■■■■■■■■■■--------------------] 35% Complete
-
-- GRUB bootloader
-- 32-bit protected mode
-- Global Descriptor Table (GDT)
-- C runtime Integration
-- Basic Memory Management
-- Interrupt Handling
-- VGA Display Features
-- Keyboard Handling
-- Shell Implementation
-- Paging
-- PIC (Programmable Interrupt Controller)
-- IDT (Interrupt Descriptor Table)
-- ISRs (Interrupt Service Routines)
+Project Status: [■■■■■■■■■------------------------] 40% Complete
 
 
-## Upcoming Features - WIP
+| **Feature**                              | **Status**          |
+|------------------------------------------|---------------------|
+| GRUB Bootloader                          | ✔️   |
+| 32-bit Protected Mode                    | ✔️   |
+| Global Descriptor Table (GDT)            | ✔️   |
+| C Runtime Integration                    | ✔️   |
+| Basic Memory Management                  | ✔️   |
+| Interrupt Handling                       | ✔️   |
+| VGA Display Features                     | ✔️   |
+| Keyboard Handling                        | ✔️   |
+| Shell Implementation                     | ✔️   |
+| PIC (Programmable Interrupt Controller)  | ✔️   |
+| IDT (Interrupt Descriptor Table)         | ✔️   |
+| ISRs (Interrupt Service Routines)        | ✔️   |
+| Paging                                   | ✔️   |
+| IDE Harddisk Driver (FAT32)              | 🟡   |
+| User Mode                                | 🟡   |
+| System Calls                             | ❌   |
+| Process Scheduling                       | ❌   |
+| Networking Capabilities                  | ❌   |
+| Graphical User Interface (GUI)           | ❌   |
+| Multitasking Support                     | ❌   |
 
-- File System Support
-- Device Drivers
-- Graphical User Interface (GUI)
-- Networking Capabilities
-- Multitasking Support
-- Process Scheduling
-- System Calls
-- User Mode
+
+
+- ✔️ = Completed  
+- 🟡 = In Progress (Implemented but not functional)  
+- ❌ = Not Implemented (Upcoming features)
+
+This adds clarity and a visual distinction to the project's status for users.
 
 ## Building ISO with Docker and testing with QEMU
 
@@ -52,7 +60,15 @@ Once the ISO is built, it will be tested using QEMU. Please ensure QEMU is insta
 To test purposes, use QEMU. Run the assembled kernel binary with the following command:
 
 ```bash
-qemu-system-x86_64 -cdrom output/KernarchOS.iso
+qemu-system-x86_64 -m 1G -netdev user,id=mynet0 -device rtl8139,netdev=mynet0 -cdrom KernarchOS.iso -drive file=disk.img,format=raw,if=ide,index=0
+```
+
+## Creating an Empty Disk Image
+
+To create a 512MB empty hard disk image, use the following command:
+
+```bash
+qemu-img create -f raw disk.img 512M 
 ```
 
 ## Manuel building and linking
