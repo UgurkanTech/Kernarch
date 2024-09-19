@@ -2,6 +2,7 @@
 #define LOGGER_H
 
 #include "terminal.h"
+#include "string_utils.h"
 
 enum LogLevel {
     DEBUG,
@@ -39,6 +40,22 @@ public:
     static void info(const char* message) {
         log(INFO, message);
     }
+
+    template<typename... Args>
+    static void info(const char* format, Args... args) {
+        char buffer[256];  // Adjust size as needed
+        format_string(buffer, sizeof(buffer), format, args...);
+        log(INFO, buffer);
+    }
+
+    template<typename... Args>
+    static void error(const char* format, Args... args) {
+        char buffer[256];  // Adjust size as needed
+        format_string(buffer, sizeof(buffer), format, args...);
+        log(ERROR, buffer);
+    }
+
+
 
     static void warning(const char* message) {
         log(WARNING, message);
