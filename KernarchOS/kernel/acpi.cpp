@@ -5,6 +5,7 @@
 #include "memory.h"
 #include "logger.h"
 #include "string_utils.h"
+#include "pit.h"
 
 using namespace std;
 
@@ -398,12 +399,27 @@ void ACPI::ide_read_buffer(int channel, int reg, void* buffer, unsigned int quad
     }
 }
 
-uint16_t ACPI::drive_read_port(const DriveInfo& drive, int reg) const {
-    return inw(drive.base_port + reg);
+void ACPI::drive_write_port(const DriveInfo& drive, int reg, uint8_t value) const {
+    outb(drive.base_port + reg, value);
 }
 
-void ACPI::drive_write_port(const DriveInfo& drive, int reg, uint16_t value) const {
-    outw(drive.base_port + reg, value);
+uint8_t ACPI::drive_read_port(const DriveInfo& drive, int reg) const {
+    return inb(drive.base_port + reg);
+}
+
+bool ACPI::wait_for_drive(const DriveInfo& drive, uint8_t mask, uint8_t value, uint32_t timeout_ms) const {
+    uint32_t start_time = pit_get_ticks();
+    uint8_t status = drive_read_port(drive, 7);
+    
+    if ((status & mask) == value) {
+        Logger::info("Drive ready");
+        return true;
+    }
+    
+    char log_message[100];
+    format_string(log_message, sizeof(log_message), "Drive not ready. Status: 0x%02X", status);
+    Logger::error(log_message);
+    return false;
 }
 
 void ACPI::drive_select(const DriveInfo& drive) {
@@ -433,4 +449,133 @@ void ACPI::read_sector(const DriveInfo& drive, uint32_t lba, uint8_t* buffer) {
         buffer[i*2] = data & 0xFF;
         buffer[i*2 + 1] = (data >> 8) & 0xFF;
     }
+}
+
+bool ACPI::write_sector(const DriveInfo& drive, uint32_t lba, const uint8_t* buffer) {
+    drive_select(drive);
+    
+    // Send LBA and sector count
+    drive_write_port(drive, 2, 1);  // Sector count = 1
+    drive_write_port(drive, 3, lba & 0xFF);
+    drive_write_port(drive, 4, (lba >> 8) & 0xFF);
+    drive_write_port(drive, 5, (lba >> 16) & 0xFF);
+    drive_write_port(drive, 6, 0xE0 | ((lba >> 24) & 0x0F) | drive.drive_select);
+
+    // Send write command
+    drive_write_port(drive, 7, 0x30);
+
+    // Wait for drive to be ready
+    if (!wait_for_drive(drive, 0x08, 0x08, 1000)) {
+        return false;
+    }
+
+    // Write data
+    for (int i = 0; i < 256; i++) {
+        uint16_t data = buffer[i*2] | (buffer[i*2 + 1] << 8);
+        drive_write_port(drive, 0, data);
+    }
+
+    // Wait for write to complete
+    return wait_for_drive(drive, 0x80, 0x00, 1000);
+}
+
+bool ACPI::read_multiple_sectors(const DriveInfo& drive, uint32_t lba, uint8_t sector_count, uint8_t* buffer) {
+    drive_select(drive);
+    
+    // Send LBA and sector count
+    drive_write_port(drive, 2, sector_count);
+    drive_write_port(drive, 3, lba & 0xFF);
+    drive_write_port(drive, 4, (lba >> 8) & 0xFF);
+    drive_write_port(drive, 5, (lba >> 16) & 0xFF);
+    drive_write_port(drive, 6, 0xE0 | ((lba >> 24) & 0x0F) | drive.drive_select);
+
+    // Send read command
+    drive_write_port(drive, 7, 0x20);
+
+    for (int sector = 0; sector < sector_count; sector++) {
+        // Wait for data
+        if (!wait_for_drive(drive, 0x08, 0x08, 1000)) {
+            return false;
+        }
+
+        // Read data
+        for (int i = 0; i < 256; i++) {
+            uint16_t data = drive_read_port(drive, 0);
+            buffer[sector*512 + i*2] = data & 0xFF;
+            buffer[sector*512 + i*2 + 1] = (data >> 8) & 0xFF;
+        }
+    }
+
+    return true;
+}
+
+
+bool ACPI::write_multiple_sectors(const DriveInfo& drive, uint32_t lba, uint8_t sector_count, const uint8_t* buffer) {
+    drive_select(drive);
+    
+    // Send LBA and sector count
+    drive_write_port(drive, 2, sector_count);
+    drive_write_port(drive, 3, lba & 0xFF);
+    drive_write_port(drive, 4, (lba >> 8) & 0xFF);
+    drive_write_port(drive, 5, (lba >> 16) & 0xFF);
+    drive_write_port(drive, 6, 0xE0 | ((lba >> 24) & 0x0F) | drive.drive_select);
+
+    // Send write command
+    drive_write_port(drive, 7, 0x30);
+
+    for (int sector = 0; sector < sector_count; sector++) {
+        // Wait for drive to be ready
+        if (!wait_for_drive(drive, 0x08, 0x08, 1000)) {
+            return false;
+        }
+
+        // Write data
+        for (int i = 0; i < 256; i++) {
+            uint16_t data = buffer[sector*512 + i*2] | (buffer[sector*512 + i*2 + 1] << 8);
+            drive_write_port(drive, 0, data);
+        }
+    }
+
+    // Wait for write to complete
+    return wait_for_drive(drive, 0x80, 0x00, 1000);
+}
+
+uint32_t ACPI::get_drive_size(const DriveInfo& drive) const {
+    return drive.size_in_sectors * 512;  // Return size in bytes
+}
+
+void ACPI::send_ata_command(const DriveInfo& drive, uint8_t command, uint8_t features, uint8_t sector_count, uint32_t lba) {
+    drive_write_port(drive, 6, 0xE0 | ((lba >> 24) & 0x0F));
+    drive_write_port(drive, 1, features);
+    drive_write_port(drive, 2, sector_count);
+    drive_write_port(drive, 3, lba & 0xFF);
+    drive_write_port(drive, 4, (lba >> 8) & 0xFF);
+    drive_write_port(drive, 5, (lba >> 16) & 0xFF);
+    drive_write_port(drive, 7, command);
+}
+
+
+
+bool ACPI::is_drive_ready(const DriveInfo& drive) const {
+    uint8_t status = drive_read_port(drive, 7);
+    bool bsy = (status & 0x80) != 0;  // Busy
+    bool drdy = (status & 0x40) != 0; // Device Ready
+    bool df = (status & 0x20) != 0;   // Device Fault
+    bool drq = (status & 0x08) != 0;  // Data Request
+    bool err = (status & 0x01) != 0;  // Error
+
+    char log_message[100];
+    format_string(log_message, sizeof(log_message), 
+        "Drive status: 0x%02X ",
+        status);
+    Logger::info(log_message);
+
+    return drdy && !bsy && !df && !err;  // Ready when DRDY is set, and BSY, DF, ERR are clear
+}
+
+
+
+
+void ACPI::send_drive_command(const DriveInfo& drive, uint8_t command) {
+    drive_write_port(drive, 7, command);
 }

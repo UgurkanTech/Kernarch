@@ -63,10 +63,22 @@ public:
     void handle_primary_ide_interrupt();
     void handle_secondary_ide_interrupt();
 
-    uint16_t drive_read_port(const DriveInfo& drive, int reg) const;
-    void drive_write_port(const DriveInfo& drive, int reg, uint16_t value) const;
+
     void drive_select(const DriveInfo& drive);
     void read_sector(const DriveInfo& drive, uint32_t lba, uint8_t* buffer);
+    bool write_sector(const DriveInfo& drive, uint32_t lba, const uint8_t* buffer);
+    bool read_multiple_sectors(const DriveInfo& drive, uint32_t lba, uint8_t sector_count, uint8_t* buffer);
+    bool write_multiple_sectors(const DriveInfo& drive, uint32_t lba, uint8_t sector_count, const uint8_t* buffer);
+    uint32_t get_drive_size(const DriveInfo& drive) const;
+    bool is_drive_ready(const DriveInfo& drive) const;
+    void send_ata_command(const DriveInfo& drive, uint8_t command, uint8_t features = 0, uint8_t sector_count = 0, uint32_t lba = 0);
+    bool wait_for_drive(const DriveInfo& drive, uint8_t mask, uint8_t value, uint32_t timeout_ms) const;
+
+
+
+    void drive_write_port(const DriveInfo& drive, int reg, uint8_t value) const;
+    uint8_t drive_read_port(const DriveInfo& drive, int reg) const;
+
 
 private:
     ACPI();  // Private constructor
@@ -96,6 +108,7 @@ private:
     uint16_t ide_read_port(int channel, int reg);
     void ide_write_port(int channel, int reg, uint16_t value);
     void ide_read_buffer(int channel, int reg, void* buffer, unsigned int quads);
+    void send_drive_command(const DriveInfo& drive, uint8_t command);
 
     void delay(int ms);
 
