@@ -28,16 +28,21 @@ void page_fault_handler(interrupt_frame* frame) {
     term_print_hex(frame->err_code);
     term_print("\nAt EIP: 0x");
     term_print_hex(frame->eip);
+    term_print("CS: 0x");
+    term_print_hex(frame->cs);
+    term_print(" SS: 0x");
+    term_print_hex(frame->ss);
     term_print("\n");
 
     if (faulting_address >= (uint32_t)&stack_guard_bottom && faulting_address < (uint32_t)&stack_top) {
         term_print("Stack overflow detected!\n");
     } else {
         term_print("General Page Fault ( ");
-        if (!(frame->err_code & 0x1)) term_print("not present ");
-        if (frame->err_code & 0x2) term_print("write ");
-        if (frame->err_code & 0x4) term_print("user-mode ");
-        if (frame->err_code & 0x8) term_print("reserved ");
+        if (!(frame->err_code & 0x1)) term_print("Page not present ");
+        if (frame->err_code & 0x2) term_print("Write operation");
+        if (frame->err_code & 0x4) term_print("User-mode ");
+        if (frame->err_code & 0x8) term_print("Reserved bits overwritten");
+        if (frame->err_code & 0x10) term_print("Instruction fetch ");
         term_print(")\n");
     }
 
@@ -118,4 +123,7 @@ extern "C" void isr_install() {
     for (int i = 0; i < 48; i++) {
         idt_set_gate(i, (uint32_t)isr_stub_table[i], 0x08, 0x8E);
     }
+
+    // Install the system call handler
+    idt_set_gate(0x80, (uint32_t)isr_stub_table[128], 0x08, 0xEE);  // User mode accessible
 }
