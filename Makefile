@@ -3,16 +3,16 @@
 all:
 	$(MAKE) -C KernarchOS
 
-run:
-	$(MAKE) -C KernarchOS run
+kernel:
+	$(MAKE) -C KernarchOS kernel
 
 iso:
 	$(MAKE) -C KernarchOS iso
 
-runiso:
-	$(MAKE) -C KernarchOS runiso
+run:
+	$(MAKE) -C KernarchOS run
 
 clean:
 	$(MAKE) -C KernarchOS clean
 
-.PHONY: all run iso runiso clean
+.PHONY: all kernel iso run clean

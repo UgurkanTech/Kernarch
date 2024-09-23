@@ -1,19 +1,18 @@
 # Use an official Debian-based image as a base
-FROM --platform=linux/i386 debian:bullseye
+FROM debian:bullseye-slim
 
 # Install required packages
-RUN apt-get update && apt-get install -y \
-	nasm \
-	gcc \
-	binutils \
+RUN apt-get update && apt-get install -y --no-install-recommends \
+	nasm:i386 \
+	gcc:i386 \
+	binutils:i386 \
 	grub-pc-bin \
 	xorriso \
 	make \
 	mtools \
-	g++ \
-	build-essential \
-	gcc-multilib \
-	g++-multilib \
+	g++:i386 \
+	libc6:i386 \
+	libc6-dev:i386 \
 	&& rm -rf /var/lib/apt/lists/*
 
 # Set up a working directory
@@ -23,12 +22,10 @@ WORKDIR /usr/src/kernarch
 COPY ./KernarchOS .
 
 # Build the bootloader and kernel
-RUN make all
+RUN make -j$(nproc) all
 
-# Create an ISO image
-#RUN make iso
-
-# Default command to run the OS in QEMU
+# Export iso file out of the container
 CMD ["cp", "/usr/src/kernarch/kernarch.iso", "/output/KernarchOS.iso"]
 
+# Keep from exiting for debugging
 #CMD tail -f /dev/null
