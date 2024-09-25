@@ -12,4 +12,7 @@
 #include "paging.h"
 #include "keyboard.h"
 
+void user_mode_entry();
+void switch_to_user_mode();
+
 #endif // KERNEL_H

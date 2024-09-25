@@ -11,6 +11,11 @@
 #include "commands.h"
 #include "acpi.h"
 #include "cstring.h"
+#include "user_mode.h"
+#include "tss.h"
+#include "disk.h"
+#include "fat32.h"
+
 
 
 extern "C" void kernel_main() {
@@ -21,6 +26,14 @@ extern "C" void kernel_main() {
     Logger::set_log_level(INFO);
 
     Logger::info("Initializing kernel...");
+
+    init_gdt();
+
+    Logger::info("GDT initialized");
+
+    init_tss((uint32_t)&stack_top); 
+
+    Logger::info("TSS initialized");
 
     idt_init();
 
@@ -61,17 +74,62 @@ extern "C" void kernel_main() {
     ACPI::instance()->scan_drives();
 
     Logger::info("Kernel initialization complete");
-
-
+    
     term_print("Welcome to KernarchOS!\n");
+    
     term_print("> ");
-    // Main kernel loop
     while (true) {
         char c = Keyboard::get_char();
         term_input(c);
     }
+
     // Enter an infinite loop
     for (;;) {
         asm volatile ("hlt");
     }
 }
+
+
+void initDisks() {
+        // Scan for drives
+    ACPI::instance()->scan_drives();
+
+    // Initialize Disk
+    Disk* disk = Disk::instance();
+    if (!disk->initialize()) {
+        Logger::error("Failed to initialize Disk");
+        return;
+    }
+
+    // Format the disk only if it's not already formatted
+    if (!disk->is_formatted()) {
+        if (disk->format_as_fat32("KERNARCHOS")) {
+            Logger::info("Disk formatted successfully");
+        } else {
+            Logger::error("Failed to format disk");
+        }
+    } else {
+        Logger::info("Disk is already formatted");
+    }
+
+    // Initialize FAT32
+    FAT32* fat32 = FAT32::instance();
+    if (!fat32->initialize(disk)) {
+        Logger::error("Failed to initialize FAT32");
+    }
+}
+
+// This function will be copied to user space
+__attribute__((section(".text"))) void user_mode_entry() {
+    asm volatile("int $0x80");  // Trigger a system call
+    volatile uint32_t test_var = 0;
+    while(1) {
+        test_var++;
+        if (test_var % 1000000 == 0) {
+            asm volatile ("int $0x80");
+        }
+    }
+}
+
+
+
