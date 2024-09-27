@@ -91,7 +91,7 @@ extern "C" void kernel_main() {
 
 
 void initDisks() {
-        // Scan for drives
+    // Scan for drives
     ACPI::instance()->scan_drives();
 
     // Initialize Disk
@@ -103,11 +103,11 @@ void initDisks() {
 
     // Format the disk only if it's not already formatted
     if (!disk->is_formatted()) {
-        if (disk->format_as_fat32("KERNARCHOS")) {
-            Logger::info("Disk formatted successfully");
-        } else {
+        if (!disk->format_as_fat32("KERNARCHOS")) {
             Logger::error("Failed to format disk");
+            return; // Early exit on failure
         }
+        Logger::info("Disk formatted successfully");
     } else {
         Logger::info("Disk is already formatted");
     }
