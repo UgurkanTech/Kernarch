@@ -8,11 +8,6 @@ TSS_SEG equ 0x28
 ; Export symbols for use in C code
 global gdt_flush
 global gdt_entries
-global USER_CODE_SEG
-global USER_DATA_SEG
-global KERNEL_CODE_SEG
-global KERNEL_DATA_SEG
-global TSS_SEG
 
 section .data
 gdt_entries:
