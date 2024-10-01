@@ -3,9 +3,6 @@
 
 TSS tss;
 
-extern "C" void set_tss_gdt_entry(int32_t num, uint32_t base, uint32_t limit);
-
-
 void init_tss(uint32_t kernel_stack) {
     // Zero out the TSS
     memset(&tss, 0, sizeof(tss));
@@ -14,23 +11,20 @@ void init_tss(uint32_t kernel_stack) {
     uint32_t limit = sizeof(tss);
 
     // Initialize TSS
-    tss.ss0 = KERNEL_DATA_SEG;
-    tss.esp0 = kernel_stack;
-    tss.cs = USER_CODE_SEG | 3;
-    tss.ss = tss.ds = tss.es = tss.fs = tss.gs = USER_DATA_SEG | 3;
-    tss.iomap_base = sizeof(tss);
-
-    // Set up the TSS entry in the GDT
-    gdt_entries[5].base_low    = base & 0xFFFF;
-    gdt_entries[5].base_middle = (base >> 16) & 0xFF;
-    gdt_entries[5].base_high   = (base >> 24) & 0xFF;
-    gdt_entries[5].limit_low   = limit & 0xFFFF;
-    gdt_entries[5].granularity = ((limit >> 16) & 0x0F) | 0x40;
-    gdt_entries[5].access      = 0x89;
+    tss.ss0 = KERNEL_DATA_SEG; // Stack segment for privilege level 0
+    tss.esp0 = kernel_stack;    // Stack pointer for privilege level 0
+    tss.cs = USER_CODE_SEG | 3; // Code segment for user mode
+    tss.ss = tss.ds = tss.es = tss.fs = tss.gs = USER_DATA_SEG | 3; // Data segments for user mode
+    tss.iomap_base = limit; // I/O map base address
 
      // Set up the TSS entry in the GDT
-    set_tss_gdt_entry(5, (uint32_t)&tss, sizeof(tss));
+    set_tss_gdt_entry(5, base, limit);
 
     // Load the TSS
     asm volatile ("ltr %%ax" : : "a" (TSS_SEG));
+}
+
+void tss_set_stack(uint32_t kss, uint32_t kesp) {
+    tss.ss0 = kss;
+    tss.esp0 = kesp;
 }
