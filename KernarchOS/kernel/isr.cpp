@@ -28,10 +28,13 @@ void page_fault_handler(interrupt_frame* frame) {
     term_print_hex(frame->err_code);
     term_print("\nAt EIP: 0x");
     term_print_hex(frame->eip);
-    term_print("CS: 0x");
+    term_print(" CS: 0x");
     term_print_hex(frame->cs);
     term_print(" SS: 0x");
     term_print_hex(frame->ss);
+    term_print(" userESP: 0x");
+    term_print_hex(frame->useresp);
+
     term_print("\n");
 
     if (faulting_address >= (uint32_t)&stack_guard_bottom && faulting_address < (uint32_t)&stack_top) {

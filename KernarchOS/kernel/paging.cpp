@@ -39,7 +39,7 @@ void init_paging() {
     memset(&kernel_page_directory, 0, sizeof(PageDirectory));
 
     // Identity map
-    for (uint32_t i = 0; i < 32; i++) {  // 32 * 4MB = 128MB
+    for (uint32_t i = 0; i < 256; i++) {  // 32 * 4MB = 128MB
         kernel_page_directory.tables[i] = ((uint32_t)&kernel_page_tables[i]) | 3;
         kernel_page_directory.tablesPhysical[i] = ((uint32_t)&kernel_page_tables[i]) | 3;
 
@@ -50,8 +50,9 @@ void init_paging() {
     }
     Logger::info("First 128MB identity mapped for kernel");
 
-    // Set up user space page tables (128MB to 1024MB)
-    for (uint32_t i = 32; i < 256; i++) {  // Next page tables (896MB)
+    
+    // Set up user space page tables (16MB to 40MB)
+    for (uint32_t i = 4; i < 10; i++) {
         kernel_page_directory.tables[i] = ((uint32_t)&kernel_page_tables[i]) | 7; // User, read/write, present
         kernel_page_directory.tablesPhysical[i] = ((uint32_t)&kernel_page_tables[i]) | 7;
 
@@ -61,6 +62,7 @@ void init_paging() {
         }
     }
     Logger::info("128MB-256MB set up for user space");
+    
     
 
     // Set the page directory
@@ -75,7 +77,7 @@ void init_paging() {
     term_print("Paging enabled\n");
 
     // Set up the stack guard page after paging is enabled
-    setup_stack_guard_region();
+    //setup_stack_guard_region();
 
     term_print("Paging initialization complete\n");
 }

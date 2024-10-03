@@ -3,7 +3,7 @@ ENTRY(_start)
 KERNEL_START = 0x100000;
 KERNEL_STACK_SIZE = 65536;  /* 64 KB */
 STACK_GUARD_SIZE = 1M;      /* 1 MB guard region */
-KERNEL_HEAP_SIZE = 16M;      /* 16 MB heap */
+KERNEL_HEAP_SIZE = 12M;      /* 12 MB heap */
 
 SECTIONS
 {
