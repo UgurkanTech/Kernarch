@@ -5,6 +5,9 @@ void handle_software_interrupt(interrupt_frame* frame) {
         case INT_OUT_OF_MEMORY:
             term_print("Out of memory! Kernel will terminate some processes now.\n");
             break;
+        case Test:
+            term_print("Test interrupt triggered!\n");
+            break;
         default:
             term_print("Unknown software interrupt!\n");
             break;

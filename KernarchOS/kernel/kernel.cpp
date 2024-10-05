@@ -76,7 +76,9 @@ extern "C" void kernel_main() {
     Logger::info("Kernel initialization complete");
     
     term_print("Welcome to KernarchOS!\n");
-    
+
+    //setup_and_switch_to_user_mode();
+
     term_print("> ");
     while (true) {
         char c = Keyboard::get_char();
@@ -87,6 +89,32 @@ extern "C" void kernel_main() {
     for (;;) {
         asm volatile ("hlt");
     }
+}
+
+#include "user_program.h"
+
+#define USER_SPACE_START 0x1000000  // 16MB
+#define USER_SPACE_END 0x2000000 // 32MB
+#define USER_STACK_SIZE 4096
+
+void setup_and_switch_to_user_mode() {
+    // Allocate memory for user program
+    uint32_t user_program_size = 512; // Adjust as needed
+    void* user_program_memory = (void*)USER_SPACE_START;
+
+
+    // Copy user program to allocated memory
+    //void* address = memcpy(user_program_memory, (void*)user_program, user_program_size);
+
+    // Allocate user stack at the end of user space
+    uint32_t user_stack_top = USER_SPACE_END - USER_STACK_SIZE;
+
+    uint32_t esp;
+    asm volatile("mov %%esp, %0" : "=r"(esp));
+    tss_set_stack(KERNEL_DATA_SEG, esp); // Use the correct segment for kernel stack
+
+    // Switch to user mode
+    UserMode::switch_to_user_mode((uint32_t)user_program_memory, user_stack_top);
 }
 
 
@@ -118,18 +146,3 @@ void initDisks() {
         Logger::error("Failed to initialize FAT32");
     }
 }
-
-// This function will be copied to user space
-__attribute__((section(".text"))) void user_mode_entry() {
-    asm volatile("int $0x80");  // Trigger a system call
-    volatile uint32_t test_var = 0;
-    while(1) {
-        test_var++;
-        if (test_var % 1000000 == 0) {
-            asm volatile ("int $0x80");
-        }
-    }
-}
-
-
-
