@@ -32,6 +32,7 @@ Project Status: [■■■■■■■■■------------------------] 40% Comple
 | User Mode                                | 🟡   |
 | System Calls                             | ❌   |
 | Process Scheduling                       | ❌   |
+| VirtIO Drivers                           | ❌   |
 | Networking Capabilities                  | ❌   |
 | Graphical User Interface (GUI)           | ❌   |
 | Multitasking Support                     | ❌   |
