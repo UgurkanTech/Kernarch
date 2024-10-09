@@ -30,6 +30,7 @@ Project Status: [■■■■■■■■■------------------------] 40% Comple
 | Paging                                   | ✔️   |
 | IDE Harddisk Driver (FAT32)              | 🟡   |
 | User Mode                                | 🟡   |
+| C Standard Library                       | ❌   |
 | System Calls                             | ❌   |
 | Process Scheduling                       | ❌   |
 | VirtIO Drivers                           | ❌   |
