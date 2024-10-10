@@ -38,6 +38,58 @@ void init_memory() {
     term_print(" bytes\n");
 }
 
+void multiboot_scan(multiboot_info_t* mbd, unsigned int magic){
+
+    if(magic != MULTIBOOT_BOOTLOADER_MAGIC) {
+        Logger::error("Invalid magic number!");
+    }
+
+    //Check bit 6 to see if valid memory map
+    if(!(mbd->flags >> 6 & 0x1)) {
+        Logger::error("Invalid memory map from GRUB Bootloader!");
+    }
+
+    unsigned int memorySize = mbd->mem_upper;
+
+    term_print("Memory available: ");
+
+    if (memorySize < 1024)
+    {
+        term_print_int(memorySize);
+        term_print(" KB");
+    }
+    else{
+        term_print_int(memorySize / 1024);
+        term_print(" MB");
+    }
+
+    term_print("\n");
+
+    return; //Return for now..
+
+    //Loop  the memory map and display the values
+    for(int i = 0; i < mbd->mmap_length; i += sizeof(multiboot_memory_map_t)) 
+    {
+        multiboot_memory_map_t* mmmt = (multiboot_memory_map_t*) (mbd->mmap_addr + i);
+
+        term_print("Start Addr: ");
+        term_print_hex(mmmt->addr);
+        term_print(" | Length: ");
+        term_print_hex(mmmt->len);
+        term_print(" | Size: ");
+        term_print_hex(mmmt->size);
+        term_print(" | Type: ");
+        term_print_hex(mmmt->type);
+        term_print("\n");
+
+
+        if(mmmt->type == MULTIBOOT_MEMORY_AVAILABLE) {
+
+        }
+    }
+}
+
+
 void* kmalloc(size_t size) {
     if (size == 0) return nullptr;
 

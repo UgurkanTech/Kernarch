@@ -11,7 +11,8 @@
 #include "idt.h"
 #include "paging.h"
 #include "keyboard.h"
+#include "multiboot.h"
 
-void setup_and_switch_to_user_mode();
+void setup_and_switch_to_user_mode(multiboot_info_t* mbd, unsigned int magic);
 
 #endif // KERNEL_H

@@ -4,9 +4,14 @@
 #include <stddef.h>
 #include <stdint.h>
 #include "kernel_config.h"
+#include "multiboot.h"
+#include "logger.h"
 
 
 void init_memory();
+
+void multiboot_scan(multiboot_info_t* mbd, unsigned int magic);
+
 void* kmalloc(size_t size);
 void kfree(void* ptr);
 void* krealloc(void* ptr, size_t new_size);

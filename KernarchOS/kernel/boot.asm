@@ -23,6 +23,9 @@ _start:
     ; Initialize base pointer (ebp) and stack pointer (esp)
     mov ebp, stack_top
     mov esp, stack_top
+
+    push eax
+    push ebx
     
     ; Call kernel_main
     call kernel_main

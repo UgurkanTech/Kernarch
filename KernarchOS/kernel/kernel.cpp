@@ -18,7 +18,7 @@
 
 
 
-extern "C" void kernel_main() {
+extern "C" void kernel_main(multiboot_info_t* mbd, unsigned int magic) {
 
     term_init();
 
@@ -69,9 +69,11 @@ extern "C" void kernel_main() {
 
     Commands::initialize();
 
-    ACPI::initialize();
+    //ACPI::initialize(); //Fix memory access
 
-    ACPI::instance()->scan_drives();
+    //ACPI::instance()->scan_drives();
+
+    multiboot_scan(mbd, magic);
 
     Logger::info("Kernel initialization complete");
     
