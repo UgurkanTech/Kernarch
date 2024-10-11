@@ -42,7 +42,7 @@ bool ACPI::initialize() {
 }
 
 ACPI::ACPI() 
-    : rsdt(nullptr), pm1a_control_block(0), slp_typa(0), slp_typb(0), rsdp(nullptr) {
+    : rsdt(nullptr), rsdp(nullptr), pm1a_control_block(0), slp_typa(0), slp_typb(0) {
     for (int i = 0; i < MAX_DRIVES; i++) {
         drives[i] = DriveInfo{};
     }
@@ -63,42 +63,73 @@ bool ACPI::init() {
         return false;
     }
 
-    uint32_t rsdt_address = *reinterpret_cast<uint32_t*>(static_cast<char*>(rsdp) + 16);
-    ACPISDTHeader* rsdt_header = reinterpret_cast<ACPISDTHeader*>(rsdt_address);
-    
-    rsdt = static_cast<ACPISDTHeader*>(kmalloc(rsdt_header->Length));
+    Logger::log(LogLevel::DEBUG, "RSDP found");
+
+    // Get RSDT address from RSDP
+    uint32_t rsdt_address = rsdp->RsdtAddress;
+    Logger::log(LogLevel::DEBUG, "RSDT address");
+
+
+    //rsdt = reinterpret_cast<ACPISDTHeader*>(rsdt_address); //Fix this
+
     if (!rsdt) {
-        Logger::log(LogLevel::ERROR, "ACPI: Failed to allocate memory for RSDT");
+        Logger::log(LogLevel::ERROR, "ACPI: Failed to map RSDT");
         return false;
     }
-    memcpy(rsdt, rsdt_header, rsdt_header->Length);
 
+    // Validate RSDT
+    if (memcmp(rsdt->Signature, "RSDT", 4) != 0) {
+        Logger::log(LogLevel::ERROR, "ACPI: Invalid RSDT signature");
+        return false;
+    }
+
+    // Parse the FADT
     parse_fadt();
 
     return true;
 }
 
-void* ACPI::find_rsdp() const {
-    const char* addr = reinterpret_cast<const char*>(0x000E0000);
-    const char* end = reinterpret_cast<const char*>(0x00100000);
-    
-    while (addr < end) {
-        if (memcmp(addr, "RSD PTR ", 8) == 0) {
-            return const_cast<char*>(addr);
+RSDPDescriptor* ACPI::find_rsdp() const {
+    const uintptr_t start_addr = 0x000E0000;
+    const uintptr_t end_addr = 0x00100000;
+
+    for (uintptr_t addr = start_addr; addr < end_addr; addr += 16) {
+        if (memcmp(reinterpret_cast<void*>(addr), "RSD PTR ", 8) == 0) {
+            RSDPDescriptor* potential_rsdp = reinterpret_cast<RSDPDescriptor*>(addr);
+            
+            // Validate checksum
+            uint8_t sum = 0;
+            for (size_t i = 0; i < sizeof(RSDPDescriptor); i++) {
+                sum += reinterpret_cast<uint8_t*>(potential_rsdp)[i];
+            }
+            
+            if (sum == 0) {
+                return potential_rsdp; // Valid RSDP found
+            }
         }
-        addr += 16;
     }
+
+    Logger::log(LogLevel::ERROR, "ACPI: RSDP not found in the specified memory range");
     return nullptr;
 }
 
 ACPISDTHeader* ACPI::find_table(const char* signature) const {
-    if (!rsdt) return nullptr;
+    if (!rsdt) {
+        Logger::log(LogLevel::ERROR, "ACPI: RSDT is null in find_table");
+        return nullptr;
+    }
 
     uint32_t entries = (rsdt->Length - sizeof(ACPISDTHeader)) / sizeof(uint32_t);
     uint32_t* table_ptrs = reinterpret_cast<uint32_t*>(reinterpret_cast<char*>(rsdt) + sizeof(ACPISDTHeader));
     
     for (uint32_t i = 0; i < entries; i++) {
         ACPISDTHeader* h = reinterpret_cast<ACPISDTHeader*>(table_ptrs[i]);
+        
+        if (!h) {
+            Logger::log(LogLevel::ERROR, "ACPI: Invalid table pointer in find_table");
+            continue;
+        }
+
         if (memcmp(h->Signature, signature, 4) == 0) {
             return h;
         }
@@ -153,9 +184,9 @@ ACPI::SystemInfo ACPI::get_system_info() const {
     SystemInfo info = {{0}, {0}, 0};
     
     if (rsdp) {
-        memcpy(info.oem_id, static_cast<char*>(rsdp) + 9, 6);
+        memcpy(info.oem_id, reinterpret_cast<char*>(rsdp) + 9, 6);
         info.oem_id[6] = '\0';
-        info.acpi_revision = *reinterpret_cast<uint8_t*>(static_cast<char*>(rsdp) + 15);
+        info.acpi_revision = *reinterpret_cast<uint8_t*>(reinterpret_cast<char*>(rsdp) + 15);
     }
 
     ACPISDTHeader* fadt = find_table("FACP");

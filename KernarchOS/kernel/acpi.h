@@ -3,6 +3,14 @@
 
 #include <stdint.h>
 
+struct RSDPDescriptor {
+    char Signature[8];
+    uint8_t Checksum;
+    char OEMID[6];
+    uint8_t Revision;
+    uint32_t RsdtAddress;
+} __attribute__ ((packed));
+
 struct ACPISDTHeader {
     char Signature[4];
     uint32_t Length;
@@ -46,7 +54,6 @@ public:
     void handle_power_button() const;
     void print_system_info() const;
 
-
     struct DriveInfo {
         bool present;
         bool is_master;
@@ -63,7 +70,6 @@ public:
     void handle_primary_ide_interrupt();
     void handle_secondary_ide_interrupt();
 
-
     void drive_select(const DriveInfo& drive);
     void read_sector(const DriveInfo& drive, uint32_t lba, uint8_t* buffer);
     bool write_sector(const DriveInfo& drive, uint32_t lba, const uint8_t* buffer);
@@ -74,34 +80,30 @@ public:
     void send_ata_command(const DriveInfo& drive, uint8_t command, uint8_t features = 0, uint8_t sector_count = 0, uint32_t lba = 0);
     bool wait_for_drive(const DriveInfo& drive, uint8_t mask, uint8_t value, uint32_t timeout_ms) const;
 
-
-
     void drive_write_port(const DriveInfo& drive, int reg, uint8_t value) const;
     uint8_t drive_read_port(const DriveInfo& drive, int reg) const;
 
-
 private:
-    ACPI();  // Private constructor
-    ACPI(const ACPI&) = delete;  // Prevent copying
-    ACPI& operator=(const ACPI&) = delete;  // Prevent assignment
+    ACPI();
+    ACPI(const ACPI&) = delete;
+    ACPI& operator=(const ACPI&) = delete;
 
     bool init();
-
     static ACPI* s_instance;
     static bool s_initialized;    
-    
+
     ACPISDTHeader* find_table(const char* signature) const;
-    void* find_rsdp() const;
+    RSDPDescriptor* find_rsdp() const;
     void parse_fadt();
     uint64_t detect_memory() const;
 
     ACPISDTHeader* rsdt;
+    RSDPDescriptor* rsdp;
     uint32_t pm1a_control_block;
     uint16_t slp_typa;
     uint16_t slp_typb;
-    void* rsdp;
 
-    static const int MAX_DRIVES = 4;  // 2 IDE channels, 2 drives each
+    static const int MAX_DRIVES = 4;
     DriveInfo drives[MAX_DRIVES];
 
     void detect_ide_drive(int channel, bool is_master);
@@ -109,9 +111,7 @@ private:
     void ide_write_port(int channel, int reg, uint16_t value);
     void ide_read_buffer(int channel, int reg, void* buffer, unsigned int quads);
     void send_drive_command(const DriveInfo& drive, uint8_t command);
-
     void delay(int ms);
-
 };
 
 #endif // ACPI_H
