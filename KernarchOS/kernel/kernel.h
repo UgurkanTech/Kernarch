@@ -13,6 +13,6 @@
 #include "keyboard.h"
 #include "multiboot.h"
 
-void setup_and_switch_to_user_mode(multiboot_info_t* mbd, unsigned int magic);
+void setup_and_switch_to_user_mode();
 
 #endif // KERNEL_H
