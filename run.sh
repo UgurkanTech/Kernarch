@@ -1,9 +1,15 @@
 #!/bin/bash
 
+clear
+
 docker compose -f "docker-compose.yml" up -d --build
 
-cd output
+if [ $? -ne 0 ]; then
+    echo "Build failed. Exiting."
+    exit 1
+fi
 
+cd output
 disk_image="disk.img"
 
 if [ -f "$disk_image" ]; then
@@ -15,3 +21,5 @@ else
 fi
 
 qemu-system-i386 -display default,show-cursor=on -m 1G -netdev user,id=mynet0 -device rtl8139,netdev=mynet0 -cdrom KernarchOS.iso -drive file=disk.img,format=raw,if=ide,index=0
+
+cd ..
