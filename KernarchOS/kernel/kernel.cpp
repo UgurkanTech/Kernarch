@@ -11,11 +11,10 @@
 #include "commands.h"
 #include "acpi.h"
 #include "cstring.h"
-#include "user_mode.h"
 #include "tss.h"
 #include "disk.h"
 #include "fat32.h"
-
+#include "process.h"
 
 
 extern "C" void kernel_main(multiboot_info_t* mbd, unsigned int magic) {
@@ -51,6 +50,7 @@ extern "C" void kernel_main(multiboot_info_t* mbd, unsigned int magic) {
 
     Logger::info("Paging initialized");
 
+    multiboot_scan(mbd, magic);
     init_memory();
 
     Logger::info("Memory initialized");
@@ -59,33 +59,32 @@ extern "C" void kernel_main(multiboot_info_t* mbd, unsigned int magic) {
     print_memory_info();
     set_text_color(VGA_WHITE);
 
-    pit_init(1000); // 1ms tick
+    pit_init(1);
     
     Logger::info("PIT initialized");
 
-    asm volatile ("sti");
-    
-    Logger::info("Interrupts enabled");
 
     Commands::initialize();
 
-    //ACPI::initialize(); //Fix memory access
+    init_processes();
+    Logger::info("Process management system initialized");
 
-    //ACPI::instance()->scan_drives();
+    // Create the terminal process
+    PCB* terminal_process = create_process(terminalProcess, true);
+    if (terminal_process) {
+        Logger::info("Terminal process created with PID %d", terminal_process->pid);
+    } else {
+        Logger::error("Failed to create terminal process");
+    }
 
-    multiboot_scan(mbd, magic);
+    asm volatile ("sti");
+    Logger::info("Interrupts enabled");
 
     Logger::info("Kernel initialization complete");
-    
     term_print("Welcome to KernarchOS!\n");
 
-    //setup_and_switch_to_user_mode();
-
-    term_print("> ");
-    while (true) {
-        char c = Keyboard::get_char();
-        term_input(c);
-    }
+    schedule();
+    
 
     // Enter an infinite loop
     for (;;) {
@@ -93,58 +92,12 @@ extern "C" void kernel_main(multiboot_info_t* mbd, unsigned int magic) {
     }
 }
 
-#include "user_program.h"
 
-#define USER_SPACE_START 0x1000000  // 16MB
-#define USER_SPACE_END 0x2000000 // 32MB
-#define USER_STACK_SIZE 4096
-
-void setup_and_switch_to_user_mode() {
-    // Allocate memory for user program
-    uint32_t user_program_size = 512; // Adjust as needed
-    void* user_program_memory = (void*)USER_SPACE_START;
-
-
-    // Copy user program to allocated memory
-    //void* address = memcpy(user_program_memory, (void*)user_program, user_program_size);
-
-    // Allocate user stack at the end of user space
-    uint32_t user_stack_top = USER_SPACE_END - USER_STACK_SIZE;
-
-    uint32_t esp;
-    asm volatile("mov %%esp, %0" : "=r"(esp));
-    tss_set_stack(KERNEL_DATA_SEG, esp); // Use the correct segment for kernel stack
-
-    // Switch to user mode
-    UserMode::switch_to_user_mode((uint32_t)user_program_memory, user_stack_top);
-}
-
-
-void initDisks() {
-    // Scan for drives
-    ACPI::instance()->scan_drives();
-
-    // Initialize Disk
-    Disk* disk = Disk::instance();
-    if (!disk->initialize()) {
-        Logger::error("Failed to initialize Disk");
-        return;
-    }
-
-    // Format the disk only if it's not already formatted
-    if (!disk->is_formatted()) {
-        if (!disk->format_as_fat32("KERNARCHOS")) {
-            Logger::error("Failed to format disk");
-            return; // Early exit on failure
-        }
-        Logger::info("Disk formatted successfully");
-    } else {
-        Logger::info("Disk is already formatted");
-    }
-
-    // Initialize FAT32
-    FAT32* fat32 = FAT32::instance();
-    if (!fat32->initialize(disk)) {
-        Logger::error("Failed to initialize FAT32");
+void terminalProcess() {
+    term_print("user> ");
+    while (true) {
+        char c = Keyboard::get_char();
+        term_input(c);
     }
 }
+

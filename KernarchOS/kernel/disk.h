@@ -2,8 +2,7 @@
 #define DISK_H
 
 #include "acpi.h"
-#include <stdint.h>
-#include <stddef.h>
+#include "types.h"
 
 class Disk {
 public:

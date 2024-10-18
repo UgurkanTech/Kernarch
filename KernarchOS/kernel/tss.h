@@ -2,7 +2,7 @@
 #define TSS_H
 
 #include "gdt.h"
-#include <stdint.h>
+#include "types.h"
 
 struct TSS {
     uint32_t prev_tss;
@@ -38,6 +38,6 @@ extern TSS tss;
 
 void init_tss(uint32_t kernel_stack);
 
-void tss_set_stack(uint32_t kss, uint32_t kesp);
+void tss_set_stack(uint32_t kesp);
 
 #endif // TSS_H

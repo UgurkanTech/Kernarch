@@ -1,7 +1,7 @@
 #ifndef KERNARCH_CSTRING_H
 #define KERNARCH_CSTRING_H
 
-#include <stddef.h>
+#include "types.h"
 
 #ifdef __cplusplus
 extern "C" {

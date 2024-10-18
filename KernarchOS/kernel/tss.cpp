@@ -1,5 +1,5 @@
 #include "tss.h"
-#include <cstring>
+#include "cstring.h"
 
 TSS tss;
 
@@ -24,7 +24,6 @@ void init_tss(uint32_t kernel_stack) {
     asm volatile ("ltr %%ax" : : "a" (TSS_SEG));
 }
 
-void tss_set_stack(uint32_t kss, uint32_t kesp) {
-    tss.ss0 = kss;
+void tss_set_stack(uint32_t kesp) {
     tss.esp0 = kesp;
 }

@@ -1,7 +1,7 @@
 #ifndef COMMANDS_H
 #define COMMANDS_H
 
-#include <stdint.h>
+#include "types.h"
 #include "terminal.h"
 
 struct Command {

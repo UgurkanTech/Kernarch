@@ -3,7 +3,7 @@
 
 #include "isr.h"
 #include "pit.h"
-#include <stdint.h>
+#include "types.h"
 
 // Software Interrupts (custom to kernel)
 enum SoftwareInterrupt {

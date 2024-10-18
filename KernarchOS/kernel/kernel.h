@@ -1,8 +1,7 @@
 #ifndef KERNEL_H
 #define KERNEL_H
 
-#include <stddef.h>
-#include <stdint.h>
+#include "types.h"
 #include "terminal.h"
 #include "isr.h"
 #include "pic.h"
@@ -13,6 +12,6 @@
 #include "keyboard.h"
 #include "multiboot.h"
 
-void setup_and_switch_to_user_mode();
+void terminalProcess();
 
 #endif // KERNEL_H

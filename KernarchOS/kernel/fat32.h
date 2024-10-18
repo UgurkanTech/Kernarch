@@ -2,8 +2,7 @@
 #define FAT32_H
 
 #include "disk.h"
-#include <stdint.h>
-#include <stddef.h>
+#include "types.h"
 
 #define FAT_ENTRY_SIZE 4
 #define DIR_ENTRY_SIZE 32

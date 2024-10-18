@@ -5,6 +5,7 @@
 //Warning: pit will overflow after about 49.7 days at 1000 Hz
 volatile uint32_t pit_ticks = 0;
 uint32_t pit_frequency = 0;
+void (*scheduler_callback)() = nullptr;
 
 void pit_init(uint32_t frequency) {
     pit_frequency = frequency;
@@ -17,6 +18,10 @@ void pit_init(uint32_t frequency) {
 
 void pit_handler() {
     pit_ticks++;
+
+    if (pit_ticks % 10 == 0 && scheduler_callback) {
+        scheduler_callback();
+    }
 }
 
 uint32_t pit_get_ticks() {
@@ -32,4 +37,8 @@ void pit_sleep(uint32_t milliseconds) {
     while (pit_get_milliseconds() - start < milliseconds) {
         asm volatile("hlt");  // Halt the CPU until the next interrupt
     }
+}
+
+void pit_register_scheduler(void (*scheduler_func)()) {
+    scheduler_callback = scheduler_func;
 }

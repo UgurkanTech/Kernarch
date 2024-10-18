@@ -1,7 +1,7 @@
 #ifndef MATH64_H
 #define MATH64_H
 
-#include <stdint.h>
+#include "types.h"
 
 uint64_t add64(uint64_t a, uint64_t b);
 uint64_t sub64(uint64_t a, uint64_t b);
