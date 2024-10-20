@@ -2,7 +2,6 @@
 #include "terminal.h"
 #include "interrupts.h"
 #include "cstring.h"
-#include <stdint.h>
 #include "kernel_config.h"
 
 using namespace std;
@@ -10,6 +9,9 @@ using namespace std;
 
 #define ALIGN_UP(num, align) (((num) + ((align) - 1)) & ~((align) - 1))
 #define MIN_BLOCK_SIZE 16
+
+uintptr_t kmalloc_start = 0;
+size_t kmalloc_size = 0;
 
 struct block_meta {
     size_t size;
@@ -21,49 +23,78 @@ struct block_meta {
 static block_meta* heap_start_block = nullptr;
 
 void init_memory() {
-    term_print("Initializing memory...\n");
+    Logger::log(LogLevel::INFO, "Initializing memory...");
 
-    heap_start_block = (block_meta*)&heap_start;
-    size_t heap_size = (size_t)((uintptr_t)&heap_end - (uintptr_t)&heap_start);
+    if (kmalloc_size == 0)
+    {
+        Logger::log(LogLevel::ERROR, "Failed to initialize memory. Is multiboot scanned?");
+        return;
+    }
+    
+    // Align the start address to a page boundary
+    uintptr_t start_addr = ALIGN_UP(kmalloc_start, 4096);
+
+    heap_start_block = (block_meta*)start_addr;
+    size_t heap_size = kmalloc_size;
 
     heap_start_block->size = heap_size - sizeof(block_meta);
     heap_start_block->free = true;
     heap_start_block->next = nullptr;
     heap_start_block->prev = nullptr;
 
-    term_print("Heap initialized. Start: ");
-    term_print_hex((uint32_t)heap_start_block);
-    term_print(", Size: ");
-    term_print_int(heap_start_block->size);
-    term_print(" bytes\n");
+    Logger::log(LogLevel::INFO, "Heap initialized. Start: 0x%x, Size: %d bytes", 
+                (uint32_t)heap_start_block, heap_start_block->size);
 }
 
 void multiboot_scan(multiboot_info_t* mbd, unsigned int magic){
 
-    if(magic != MULTIBOOT_BOOTLOADER_MAGIC) {
+    if (magic != MULTIBOOT_BOOTLOADER_MAGIC) {
         Logger::error("Invalid magic number!");
+        return;
     }
 
-    //Check bit 6 to see if valid memory map
-    if(!(mbd->flags >> 6 & 0x1)) {
+    if (!(mbd->flags >> 6 & 0x1)) {
         Logger::error("Invalid memory map from GRUB Bootloader!");
+        return;
     }
 
-    unsigned int memorySize = mbd->mem_upper;
+    uintptr_t kernel_end = USER_SPACE_START; // Assuming you have this symbol defined in your linker script
+    kernel_end = ALIGN_UP(kernel_end, 4096); // Align to page boundary
 
-    term_print("Memory available: ");
+    Logger::log(LogLevel::INFO, "Scanning memory map...");
 
-    if (memorySize < 1024)
-    {
-        term_print_int(memorySize);
-        term_print(" KB");
+    multiboot_memory_map_t* mmap = (multiboot_memory_map_t*)mbd->mmap_addr;
+    while ((uintptr_t)mmap < mbd->mmap_addr + mbd->mmap_length) {
+        if (mmap->type == MULTIBOOT_MEMORY_AVAILABLE) {
+            uintptr_t region_start = (uintptr_t)mmap->addr;
+            uintptr_t region_end = region_start + mmap->len;
+
+            // Ensure we're not using memory below the kernel
+            if (region_start < kernel_end) {
+                region_start = kernel_end;
+            }
+
+            // Recalculate region size after potential adjustment
+            size_t region_size = region_end > region_start ? region_end - region_start : 0;
+
+            // Check if this region is larger than the previously found largest region
+            if (region_size > kmalloc_size) {
+                kmalloc_start = region_start;
+                kmalloc_size = region_size;
+            }
+        }
+
+        mmap = (multiboot_memory_map_t*)((uintptr_t)mmap + mmap->size + sizeof(mmap->size));
     }
-    else{
-        term_print_int(memorySize / 1024);
-        term_print(" MB");
+
+    if (kmalloc_size == 0) {
+        Logger::error("No suitable memory region found for kmalloc!");
+        return;
     }
 
-    term_print("\n");
+    Logger::log(LogLevel::INFO, "Largest available memory region for kmalloc:");
+    print_memory_size("  Start", kmalloc_start);
+    print_memory_size("  Size", kmalloc_size);
 
     return; //Return for now..
 
@@ -224,8 +255,18 @@ uint32_t get_total_stack_size() {
     return (uint32_t)&stack_top - (uint32_t)&stack_bottom;
 }
 
+void print_memory_size(const char* prefix, size_t size) {
+    if (size >= 1024 * 1024) {
+        Logger::log(LogLevel::INFO, "%s: %d MB", prefix, size / (1024 * 1024));
+    } else if (size >= 1024) {
+        Logger::log(LogLevel::INFO, "%s: %d KB", prefix, size / 1024);
+    } else {
+        Logger::log(LogLevel::INFO, "%s: %d bytes", prefix, size);
+    }
+}
+
 void print_memory_info(){
-    term_print("Heap info:\n");
+    Logger::log(LogLevel::INFO, "Memory Information:");
     block_meta* current = heap_start_block;
     int block_count = 0;
     size_t free_memory = 0;
@@ -241,40 +282,16 @@ void print_memory_info(){
         current = current->next;
     }
 
-    size_t total_heap_size = (size_t)((uintptr_t)&heap_end - (uintptr_t)&heap_start);
-    size_t managed_memory = free_memory + used_memory;
+    size_t total_heap_size = free_memory + used_memory + block_count * sizeof(block_meta);
 
-    term_print("  Total Heap Size: ");
-    term_print_int(total_heap_size / (1024 * 1024));
-    term_print(" MB\n");
+    print_memory_size("  Total Heap Size", total_heap_size);
+    print_memory_size("  Used Memory", used_memory);
+    print_memory_size("  Free Memory", free_memory);
+    Logger::log(LogLevel::INFO, "  Block Count: %d", block_count);
 
-    term_print("  Managed Memory: ");
-    term_print_int(managed_memory / (1024 * 1024));
-    term_print(" MB\n");
-
-    term_print("  Blocks: ");
-    term_print_int(block_count);
-    term_print("\n");
-
-    term_print("  Used: ");
-    term_print_int(used_memory / (1024 * 1024));
-    term_print(" MB\n");
-
-    term_print("  Free: ");
-    term_print_int(free_memory / (1024 * 1024));
-    term_print(" MB\n");
-
-    if (managed_memory < total_heap_size) {
-        term_print("  Unmanaged: ");
-        term_print_int((total_heap_size - managed_memory) / (1024 * 1024));
-        term_print(" MB\n");
-    }
-
-    term_print("Stack info:\n  Used: ");
-    term_print_int(get_stack_usage());
-    term_print(" bytes\n  Total: ");
-    term_print_int(get_total_stack_size());
-    term_print(" bytes\n");
+    Logger::log(LogLevel::INFO, "Stack Information:");
+    print_memory_size("  Used", get_stack_usage());
+    print_memory_size("  Total", get_total_stack_size());
 }
 
 // Global new and delete operators

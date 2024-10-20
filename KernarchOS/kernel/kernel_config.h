@@ -4,6 +4,8 @@
 #define KERNEL_START 0x100000
 #define KERNEL_VIRTUAL_BASE 0x00000000  // No virtual offset
 
+#define USER_SPACE_START 0x1000000  // 16MB
+
 #define PAGE_SIZE 4096
 
 

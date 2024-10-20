@@ -28,9 +28,7 @@ SECTIONS
     *(.COMMON)
     *(.bss)
   }
-  kernel_end = .;
-
-
+  
   /* Stack guard region */
   . = ALIGN(4K);
   stack_guard_bottom = .;
@@ -49,12 +47,5 @@ SECTIONS
   }
   stack_top = .;
 
-  /* Heap section */
-  . = ALIGN(4K);
-  heap_start = .;
-  .heap : AT(ADDR(.heap))
-  {
-    . += KERNEL_HEAP_SIZE;
-  }
-  heap_end = .;
+  kernel_end = .;
 }
