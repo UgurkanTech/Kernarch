@@ -54,6 +54,14 @@ public:
         format_string(buffer, sizeof(buffer), format, args...);
         log(ERROR, buffer);
     }
+    template<typename... Args>
+    static void log(LogLevel level, const char* format, Args... args) {
+        if (level >= current_log_level) {
+            char buffer[256];  // Adjust size as needed
+            format_string(buffer, sizeof(buffer), format, args...);
+            log(level, buffer);
+        }
+    }
 
 
 
