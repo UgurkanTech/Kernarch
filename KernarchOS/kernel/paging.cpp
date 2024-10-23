@@ -5,7 +5,7 @@
 #include "logger.h"
 
 PageDirectory kernel_page_directory __attribute__((aligned(4096)));
-PageTable kernel_page_tables[256] __attribute__((aligned(4096)));
+PageTable kernel_page_tables[1024] __attribute__((aligned(4096)));
 
 void setup_stack_guard_region() {
     term_print("Setting up stack guard region...\n");
@@ -39,7 +39,7 @@ void init_paging() {
     memset(&kernel_page_directory, 0, sizeof(PageDirectory));
 
     // Identity map
-    for (uint32_t i = 0; i < 256; i++) {  // 32 * 4MB = 128MB
+    for (uint32_t i = 0; i < 1024; i++) {  // 32 * 4MB = 128MB
         kernel_page_directory.tables[i] = ((uint32_t)&kernel_page_tables[i]) | 3;
         kernel_page_directory.tablesPhysical[i] = ((uint32_t)&kernel_page_tables[i]) | 3;
 
@@ -52,7 +52,7 @@ void init_paging() {
 
     
     // Set up user space page tables (16MB to 40MB)
-    for (uint32_t i = 4; i < 10; i++) {
+    for (uint32_t i = 0; i < 1024; i++) {
         kernel_page_directory.tables[i] = ((uint32_t)&kernel_page_tables[i]) | 7; // User, read/write, present
         kernel_page_directory.tablesPhysical[i] = ((uint32_t)&kernel_page_tables[i]) | 7;
 

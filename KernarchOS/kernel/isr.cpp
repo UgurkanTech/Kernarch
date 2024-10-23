@@ -7,6 +7,9 @@
 #include "interrupts.h"
 #include "acpi.h"
 #include "kernel_config.h"
+#include "io.h"
+#include "string_utils.h"
+#include "logger.h"
 
 const char* exception_messages[] = {
     "Division By Zero", "Debug", "Non Maskable Interrupt", "Breakpoint",
@@ -16,6 +19,69 @@ const char* exception_messages[] = {
     "Coprocessor Fault", "Alignment Check", "Machine Check", "SIMD Floating-Point Exception",
     "Virtualization Exception", "Control Protection Exception"
 };
+
+void log_to_serial(const char* message) {
+    // Write to COM1
+    while (*message) {
+        outb(0x3F8, *message++);
+    }
+}
+
+void print_interrupt_frame(struct interrupt_frame* frame) {
+    char buffer[256];
+
+    format_string(buffer, sizeof(buffer), "Interrupt Frame:\n");
+    log_to_serial(buffer);
+
+    format_string(buffer, sizeof(buffer), "DS: 0x%x\n", frame->ds);
+    log_to_serial(buffer);
+
+    format_string(buffer, sizeof(buffer), "EDI: 0x%x\n", frame->edi);
+    log_to_serial(buffer);
+
+    format_string(buffer, sizeof(buffer), "ESI: 0x%x\n", frame->esi);
+    log_to_serial(buffer);
+
+    format_string(buffer, sizeof(buffer), "EBP: 0x%x\n", frame->ebp);
+    log_to_serial(buffer);
+
+    format_string(buffer, sizeof(buffer), "ESP: 0x%x\n", frame->esp);
+    log_to_serial(buffer);
+
+    format_string(buffer, sizeof(buffer), "EBX: 0x%x\n", frame->ebx);
+    log_to_serial(buffer);
+
+    format_string(buffer, sizeof(buffer), "EDX: 0x%x\n", frame->edx);
+    log_to_serial(buffer);
+
+    format_string(buffer, sizeof(buffer), "ECX: 0x%x\n", frame->ecx);
+    log_to_serial(buffer);
+
+    format_string(buffer, sizeof(buffer), "EAX: 0x%x\n", frame->eax);
+    log_to_serial(buffer);
+
+    format_string(buffer, sizeof(buffer), "Interrupt Number: %d\n", frame->int_no);
+    log_to_serial(buffer);
+
+    format_string(buffer, sizeof(buffer), "Error Code: 0x%x\n", frame->err_code);
+    log_to_serial(buffer);
+
+    format_string(buffer, sizeof(buffer), "EIP: 0x%x\n", frame->eip);
+    log_to_serial(buffer);
+
+    format_string(buffer, sizeof(buffer), "CS: 0x%x\n", frame->cs);
+    log_to_serial(buffer);
+
+    format_string(buffer, sizeof(buffer), "EFLAGS: 0x%x\n", frame->eflags);
+    log_to_serial(buffer);
+
+    format_string(buffer, sizeof(buffer), "User ESP: 0x%x\n", frame->useresp);
+    log_to_serial(buffer);
+
+    format_string(buffer, sizeof(buffer), "SS: 0x%x\n", frame->ss);
+    log_to_serial(buffer);
+}
+
 
 void page_fault_handler(interrupt_frame* frame) {
     uint32_t faulting_address;
@@ -69,12 +135,23 @@ extern "C" void isr_handler(interrupt_frame* frame) {
                 term_print("Division by zero exception\n");
                 frame->eip += 2; // Skip the instruction that caused the exception XD
                 break;
+            case EXC_DOUBLE_FAULT:
+                term_print("Double fault occurred! Halting the system.");
+                while(1);
+                break;
+            case EXC_GENERAL_PROTECTION:
+                term_print("General Protection Fault! Halting the system.");
+                print_interrupt_frame(frame);
+                while (1);
+                break;
             default:
                 term_print("Unhandled CPU Exception: ");
                 term_print_uint(frame->int_no);
                 term_print(" - ");
                 term_print(exception_messages[frame->int_no]);
                 term_print("\n");
+                print_interrupt_frame(frame);
+                while (1);
                 break;
         }
 
@@ -128,5 +205,5 @@ extern "C" void isr_install() {
     }
 
     // Install the system call handler
-    idt_set_gate(0x80, (uint32_t)isr_stub_table[128], 0x08, 0xEE);  // User mode accessible
+    //idt_set_gate(0x80, (uint32_t)isr_stub_table[128], 0x08, 0xEE);  // User mode accessible
 }

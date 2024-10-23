@@ -2,7 +2,7 @@
 AS=nasm
 LD=ld
 CC=gcc
-CFLAGS=-m32 -ffreestanding -O1 -Wall -Wextra -MMD -c -g -fno-exceptions -fno-rtti -std=c++17
+CFLAGS=-m32 -w -ffreestanding -nostdlib -nostdinc -O1 -Wall -Wextra -MMD -c -g -fno-exceptions  -Wno-unused-variable -Wno-unused-parameter -fno-rtti -std=c++17
 LDFLAGS=-T linker.ld -nostdlib -m elf_i386
 ASFLAGS=-felf32
 KERNEL=kernel.bin
@@ -18,19 +18,19 @@ all: $(KERNEL) $(ISO)
 
 # Rule to compile C++ files
 %.o: %.cpp
-	$(CC) $(CFLAGS) -c $< -o $@
+	@$(CC) $(CFLAGS) -c $< -o $@ 
 
 # Rule to compile C files
 %.o: %.c
-	$(CC) $(CFLAGS) -c $< -o $@
+	@$(CC) $(CFLAGS) -c $< -o $@
 
 # Rule to assemble .asm files
 %.o: %.asm
-	$(AS) $(ASFLAGS) $< -o $@
+	@$(AS) $(ASFLAGS) $< -o $@
 
 # Rule to make the kernel
 $(KERNEL): $(COBJECTS) $(ASM_OBJECTS)
-	$(LD) $(LDFLAGS) -o $@ $(ASM_OBJECTS) $(COBJECTS)
+	@$(LD) $(LDFLAGS) -o $@ $(ASM_OBJECTS) $(COBJECTS) 
 
 # Rule to make the ISO
 $(ISO): $(KERNEL)

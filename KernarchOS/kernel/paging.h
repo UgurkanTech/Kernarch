@@ -1,7 +1,7 @@
 #ifndef PAGING_H
 #define PAGING_H
 
-#include <stdint.h>
+#include "types.h"
 #include "kernel_config.h"
 
 #define PAGE_SIZE 4096
@@ -19,7 +19,7 @@ struct PageDirectory {
 
 // Statically allocate the kernel page directory and initial page table
 extern PageDirectory kernel_page_directory;
-extern PageTable kernel_page_tables[256];
+extern PageTable kernel_page_tables[1024];
 
 void init_paging();
 bool map_page(uint32_t virtual_address, uint32_t physical_address, bool is_kernel, bool is_writable);
