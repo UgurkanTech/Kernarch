@@ -1,91 +1,104 @@
-; context_switch.asm
+; Context switching implementation for x86
 section .text
 global save_context
 global load_context
 
+; save_context(Context* context)
+; Returns: 0 when saving context, 1 when returning from load_context
 save_context:
-    ; Get the Context* argument
+    ; Check if context pointer is null
     mov eax, [esp + 4]
+    test eax, eax
+    jz .skip_save        ; If null, skip saving
     
     ; Save general purpose registers
-    mov [eax + 0], edi
-    mov [eax + 4], esi
-    mov [eax + 8], ebp
-    mov [eax + 12], esp
-    mov [eax + 16], ebx
-    mov [eax + 20], edx
-    mov [eax + 24], ecx
-    mov [eax + 28], eax
+    mov [eax + 0], edi   ; offset 0
+    mov [eax + 4], esi   ; offset 4
+    mov [eax + 8], ebp   ; offset 8
+    mov [eax + 16], ebx  ; offset 16
+    mov [eax + 20], edx  ; offset 20
+    mov [eax + 24], ecx  ; offset 24
+    
+    ; Save esp (adjust for the call to save_context)
+    lea edx, [esp + 8]   ; esp + 8 to skip return addr and context ptr
+    mov [eax + 12], edx  ; offset 12
+    
+    ; Save eax
+    mov [eax + 28], eax  ; offset 28
     
     ; Save segment registers
-    mov [eax + 32], cs
-    mov [eax + 34], ds
-    mov [eax + 36], es
-    mov [eax + 38], fs
-    mov [eax + 40], gs
-    mov [eax + 42], ss
+    mov edx, cs
+    mov [eax + 32], edx  ; offset 32
+    mov edx, ds
+    mov [eax + 34], edx  ; offset 34
+    mov edx, es
+    mov [eax + 36], edx  ; offset 36
+    mov edx, fs
+    mov [eax + 38], edx  ; offset 38
+    mov edx, gs
+    mov [eax + 40], edx  ; offset 40
+    mov edx, ss
+    mov [eax + 42], edx  ; offset 42
     
     ; Save eip (return address)
-    mov ecx, [esp]
-    mov [eax + 44], ecx
+    mov edx, [esp]       ; Get return address from stack
+    mov [eax + 44], edx  ; offset 44
     
     ; Save eflags
     pushfd
-    pop ecx
-    mov [eax + 48], ecx
+    pop edx
+    mov [eax + 48], edx  ; offset 48
     
-    ; Save CR3 (page directory)
-    mov ecx, cr3
-    mov [eax + 52], ecx
+    ; Save control registers
+    mov edx, cr3
+    mov [eax + 60], edx  ; offset 60
     
+.skip_save:
+    xor eax, eax        ; Return 0 when saving context
     ret
 
+; load_context(Context* context)
+; Never returns to caller - switches to new context
 load_context:
-    ; Get the Context* argument
-    mov eax, [esp + 4]
+    mov eax, [esp + 4]   ; Get context pointer
     
-    ; Load CR3 (page directory)
-    mov ecx, [eax + 52]
-    mov cr3, ecx
+    ; Load CR3 first if paging needs to change
+    mov edx, [eax + 60]  ; offset 60
+    mov cr3, edx
     
     ; Load segment registers
-    mov cx, [eax + 34]
-    mov ds, cx
-    mov cx, [eax + 36]
-    mov es, cx
-    mov cx, [eax + 38]
-    mov fs, cx
-    mov cx, [eax + 40]
-    mov gs, cx
+    mov dx, [eax + 34]   ; offset 34
+    mov ds, dx
+    mov dx, [eax + 36]   ; offset 36
+    mov es, dx
+    mov dx, [eax + 38]   ; offset 38
+    mov fs, dx
+    mov dx, [eax + 40]   ; offset 40
+    mov gs, dx
+    mov dx, [eax + 42]   ; offset 42
+    mov ss, dx
     
-    ; Load general purpose registers
-    mov edi, [eax + 0]
-    mov esi, [eax + 4]
-    mov ebp, [eax + 8]
-    mov ebx, [eax + 16]
-    mov edx, [eax + 20]
-    mov ecx, [eax + 24]
+    ; Load general registers
+    mov ebp, [eax + 8]   ; offset 8
+    mov ebx, [eax + 16]  ; offset 16
+    mov edx, [eax + 20]  ; offset 20
+    mov ecx, [eax + 24]  ; offset 24
+    mov esi, [eax + 4]   ; offset 4
+    mov edi, [eax + 0]   ; offset 0
     
-    ; Load esp
-    mov esp, [eax + 12]
+    ; Load eflags
+    push dword [eax + 48] ; offset 48
+    popfd
     
-    ; Push ss (if switching to user mode)
-    push dword [eax + 42]
+    ; Set up stack for iret
+    push dword [eax + 42] ; SS
+    push dword [eax + 12] ; ESP
+    push dword [eax + 48] ; EFLAGS
+    push dword [eax + 32] ; CS
+    push dword [eax + 44] ; EIP
     
-    ; Push esp
-    push dword [eax + 12]
+    ; Load eax last (no longer need context pointer)
+    mov eax, [eax + 28]  ; offset 28
     
-    ; Push eflags
-    push dword [eax + 48]
-    
-    ; Push cs
-    push dword [eax + 32]
-    
-    ; Push eip
-    push dword [eax + 44]
-    
-    ; Load eax last (since we've been using it)
-    mov eax, [eax + 28]
-    
-    ; Return and switch context
-    iretd
+    ; Switch to new context
+    iret
