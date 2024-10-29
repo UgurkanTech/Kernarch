@@ -131,9 +131,17 @@ extern "C" void isr_handler(interrupt_frame* frame) {
             case EXC_PAGE_FAULT:
                 page_fault_handler(frame);
                 break;
+            case EXC_DEBUG:
+                term_print("Debug Interrupt Triggered.\n");
+                break;
             case EXC_DIVIDE_ERROR:
                 term_print("Division by zero exception\n");
                 frame->eip += 2; // Skip the instruction that caused the exception XD
+                break;
+
+            case EXC_BOUND_RANGE_EXCEEDED:
+                term_print("Out of bounds exception\n");
+                while(1);
                 break;
             case EXC_DOUBLE_FAULT:
                 term_print("Double fault occurred! Halting the system.");
@@ -179,6 +187,7 @@ extern "C" void isr_handler(interrupt_frame* frame) {
                 break;
         }
         pic_sendEOI(irq);
+        
     } else if (frame->int_no < 256) {
         // Handle software interrupts
         handle_software_interrupt(frame);

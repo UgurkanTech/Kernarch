@@ -19,7 +19,8 @@ void pit_init(uint32_t frequency) {
 void pit_handler() {
     pit_ticks++;
 
-    if (pit_ticks % 10 == 0 && scheduler_callback) {
+    if (pit_ticks % 500 == 0 && scheduler_callback) {
+        outb(0x20, 0x20); // Send EOI to the master PIC
         scheduler_callback();
     }
 }
@@ -33,8 +34,10 @@ uint32_t pit_get_milliseconds() {
 }
 
 void pit_sleep(uint32_t milliseconds) {
-    uint32_t start = pit_get_milliseconds();
-    while (pit_get_milliseconds() - start < milliseconds) {
+    uint32_t start_ticks = pit_ticks; // Get the current tick count
+    uint32_t target_ticks = start_ticks + (milliseconds / (1000 / pit_frequency)); // Calculate target ticks
+
+    while (pit_ticks < target_ticks) {
         asm volatile("hlt");  // Halt the CPU until the next interrupt
     }
 }

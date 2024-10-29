@@ -9,7 +9,7 @@
 enum SoftwareInterrupt {
     INT_OUT_OF_MEMORY = 48,
     INT_STACK_OVERFLOW = 49,
-    Test = 128,
+    Yield = 128,
 };
 
 void handle_software_interrupt(interrupt_frame* frame);
