@@ -1,104 +1,110 @@
-; Context switching implementation for x86
 section .text
 global save_context
 global load_context
 
 ; save_context(Context* context)
-; Returns: 0 when saving context, 1 when returning from load_context
 save_context:
-    ; Check if context pointer is null
-    mov eax, [esp + 4]
-    test eax, eax
-    jz .skip_save        ; If null, skip saving
-    
-    ; Save general purpose registers
-    mov [eax + 0], edi   ; offset 0
-    mov [eax + 4], esi   ; offset 4
-    mov [eax + 8], ebp   ; offset 8
-    mov [eax + 16], ebx  ; offset 16
-    mov [eax + 20], edx  ; offset 20
-    mov [eax + 24], ecx  ; offset 24
-    
-    ; Save esp (adjust for the call to save_context)
-    lea edx, [esp + 8]   ; esp + 8 to skip return addr and context ptr
-    mov [eax + 12], edx  ; offset 12
-    
-    ; Save eax
-    mov [eax + 28], eax  ; offset 28
-    
-    ; Save segment registers
+    ; Push general-purpose registers and flags
+    pushad                   ; Save all general-purpose registers (EDI, ESI, EBP, ESP, EBX, EDX, ECX, EAX)
+    pushfd                   ; Save EFLAGS
+
+    ; Get the context pointer from the stack
+    mov eax, [esp + 44]      ; Context pointer is at [esp + 44]
+
+    ; Save ESP (adjust for pushad and pushfd)
+    lea edx, [esp + 8]       ; ESP + 8 to skip over saved pushad and pushfd values
+    mov [eax + 12], edx      ; Save adjusted ESP in context
+
+    ; Save general-purpose registers to context
+    mov [eax + 0], edi
+    mov [eax + 4], esi
+    mov [eax + 8], ebp
+    mov [eax + 16], ebx
+    mov [eax + 20], edx
+    mov [eax + 24], ecx
+    mov [eax + 28], eax      ; EAX itself
+
+    ; Save segment selectors
     mov edx, cs
-    mov [eax + 32], edx  ; offset 32
+    mov [eax + 32], dx
     mov edx, ds
-    mov [eax + 34], edx  ; offset 34
+    mov [eax + 34], dx
     mov edx, es
-    mov [eax + 36], edx  ; offset 36
+    mov [eax + 36], dx
     mov edx, fs
-    mov [eax + 38], edx  ; offset 38
+    mov [eax + 38], dx
     mov edx, gs
-    mov [eax + 40], edx  ; offset 40
+    mov [eax + 40], dx
     mov edx, ss
-    mov [eax + 42], edx  ; offset 42
-    
-    ; Save eip (return address)
-    mov edx, [esp]       ; Get return address from stack
-    mov [eax + 44], edx  ; offset 44
-    
-    ; Save eflags
-    pushfd
-    pop edx
-    mov [eax + 48], edx  ; offset 48
-    
+    mov [eax + 42], dx
+
+    ; Save EIP (next instruction pointer) and EFLAGS
+    mov edx, [esp + 4]       ; Return address is just above saved registers
+    mov [eax + 44], edx      ; Save EIP in context
+    mov edx, [esp]           ; EFLAGS was saved by pushfd
+    mov [eax + 48], edx      ; Save EFLAGS
+
     ; Save control registers
+    mov edx, cr0
+    mov [eax + 52], edx
+    mov edx, cr2
+    mov [eax + 56], edx
     mov edx, cr3
-    mov [eax + 60], edx  ; offset 60
-    
-.skip_save:
-    xor eax, eax        ; Return 0 when saving context
+    mov [eax + 60], edx
+    mov edx, cr4
+    mov [eax + 64], edx
+
+    ; Restore original register state
+    popfd                    ; Restore EFLAGS
+    popad                    ; Restore all general-purpose registers
     ret
 
+
 ; load_context(Context* context)
-; Never returns to caller - switches to new context
+; Does not return to caller, switches to new context
 load_context:
-    mov eax, [esp + 4]   ; Get context pointer
-    
+    mov eax, [esp + 4]       ; Get context pointer from argument
+
     ; Load CR3 first if paging needs to change
-    mov edx, [eax + 60]  ; offset 60
+    mov edx, [eax + 60]      ; offset 60 for CR3
     mov cr3, edx
-    
-    ; Load segment registers
-    mov dx, [eax + 34]   ; offset 34
+
+    ; Load segment selectors from context
+    mov dx, [eax + 34]       ; DS
     mov ds, dx
-    mov dx, [eax + 36]   ; offset 36
+    mov dx, [eax + 36]       ; ES
     mov es, dx
-    mov dx, [eax + 38]   ; offset 38
+    mov dx, [eax + 38]       ; FS
     mov fs, dx
-    mov dx, [eax + 40]   ; offset 40
+    mov dx, [eax + 40]       ; GS
     mov gs, dx
-    mov dx, [eax + 42]   ; offset 42
+    mov dx, [eax + 42]       ; SS
     mov ss, dx
+
+    ; Set up the stack for iret
+    mov esp, [eax + 12]    ; Load new stack pointer
     
-    ; Load general registers
-    mov ebp, [eax + 8]   ; offset 8
-    mov ebx, [eax + 16]  ; offset 16
-    mov edx, [eax + 20]  ; offset 20
-    mov ecx, [eax + 24]  ; offset 24
-    mov esi, [eax + 4]   ; offset 4
-    mov edi, [eax + 0]   ; offset 0
-    
-    ; Load eflags
-    push dword [eax + 48] ; offset 48
+
+    ; Load EFLAGS
+    push dword [eax + 48]    ; offset 48 for EFLAGS
     popfd
-    
-    ; Set up stack for iret
-    push dword [eax + 42] ; SS
-    push dword [eax + 12] ; ESP
-    push dword [eax + 48] ; EFLAGS
-    push dword [eax + 32] ; CS
-    push dword [eax + 44] ; EIP
-    
-    ; Load eax last (no longer need context pointer)
-    mov eax, [eax + 28]  ; offset 28
-    
-    ; Switch to new context
+
+    ; Prepare stack for iret (sets SS, ESP, EFLAGS, CS, EIP)
+    push dword [eax + 42]    ; SS
+    push dword [eax + 12]    ; ESP
+    push dword [eax + 48]    ; EFLAGS
+    push dword [eax + 32]    ; CS
+    push dword [eax + 44]    ; EIP
+
+
+    ; Load general-purpose registers
+    mov edi, [eax + 0]     ; EDI
+    mov esi, [eax + 4]     ; ESI
+    mov ebp, [eax + 8]     ; EBP
+    mov ebx, [eax + 16]    ; EBX
+    mov edx, [eax + 20]    ; EDX
+    mov ecx, [eax + 24]    ; ECX
+    mov eax, [eax + 28]      ; EAX
+
+    ; Execute iret to switch context
     iret
