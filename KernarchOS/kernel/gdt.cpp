@@ -39,5 +39,5 @@ void set_tss_gdt_entry(int32_t num, uint32_t base, uint32_t limit) {
     
     gdt_entries[num].limit_low   = (limit & 0xFFFF);
     gdt_entries[num].granularity = ((limit >> 16) & 0x0F) | 0x40; // Set granularity to 4KB
-    gdt_entries[num].access      = 0xE9; // Access byte for TSS
+    gdt_entries[num].access      = 0x89; // Access byte for TSS
 }

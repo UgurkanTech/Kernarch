@@ -72,6 +72,7 @@ isr_common_stub:
     mov gs, ax
 
     push esp               ; Push a pointer to the interrupt frame
+    cld
     call isr_handler
     add esp, 4             ; Remove the pushed parameter
 

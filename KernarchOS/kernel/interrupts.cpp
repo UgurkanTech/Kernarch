@@ -8,7 +8,7 @@ void handle_software_interrupt(interrupt_frame* frame) {
             break;
         case Yield:
             term_print("Yield interrupt triggered!\n");
-            schedule();
+            //schedule();
             break;
         default:
             term_print("Unknown software interrupt!\n");
