@@ -2,11 +2,10 @@
 
 extern "C" GDTEntry gdt_entries[GDT_ENTRIES];
 
-static void gdt_set_gate(int32_t num, uint32_t base, uint32_t limit, uint8_t access, uint8_t gran) {
+void gdt_set_gate(int32_t num, uint32_t base, uint32_t limit, uint8_t access, uint8_t gran) {
     gdt_entries[num].base_low    = (base & 0xFFFF);
     gdt_entries[num].base_middle = (base >> 16) & 0xFF;
     gdt_entries[num].base_high   = (base >> 24) & 0xFF;
-
     gdt_entries[num].limit_low   = (limit & 0xFFFF);
     gdt_entries[num].granularity = ((limit >> 16) & 0x0F) | (gran & 0xF0);
     gdt_entries[num].access      = access;
@@ -30,14 +29,4 @@ void init_gdt() {
     gdt_set_gate(4, 0, 0xFFFFFFFF, 0xF2, 0xCF); // User mode data segment - 0xF2 (present, writable, DPL = 3)
 
     gdt_flush(&gdt_ptr);
-}
-
-void set_tss_gdt_entry(int32_t num, uint32_t base, uint32_t limit) {
-    gdt_entries[num].base_low    = (base & 0xFFFF);
-    gdt_entries[num].base_middle = (base >> 16) & 0xFF;
-    gdt_entries[num].base_high   = (base >> 24) & 0xFF;
-    
-    gdt_entries[num].limit_low   = (limit & 0xFFFF);
-    gdt_entries[num].granularity = ((limit >> 16) & 0x0F) | 0x40; // Set granularity to 4KB
-    gdt_entries[num].access      = 0x89; // Access byte for TSS
 }

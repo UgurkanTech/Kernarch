@@ -34,6 +34,6 @@ extern "C" {
     void gdt_flush(GDTPointer* gdt_ptr);
 }
 extern void init_gdt();
-void set_tss_gdt_entry(int32_t num, uint32_t base, uint32_t limit);
+void gdt_set_gate(int32_t num, uint32_t base, uint32_t limit, uint8_t access, uint8_t gran);
 
 #endif // GDT_H
