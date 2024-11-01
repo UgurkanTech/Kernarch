@@ -3,6 +3,7 @@
 
 #include "terminal.h"
 #include "string_utils.h"
+#include "io.h"
 
 enum LogLevel {
     DEBUG,
@@ -77,6 +78,21 @@ public:
         log(CRITICAL, message);
     }
 
+    static void serial_log(const char* format, ...) {
+        char buffer[512]; // Buffer size for formatted message
+        va_list args; // Variable argument list
+
+        va_start(args, format); // Initialize args to retrieve additional arguments
+        int result = vformat_string(buffer, sizeof(buffer), format, args); // Format the message
+        va_end(args); // Clean up the variable argument list
+
+
+        const char* message = buffer;
+        while (*message) {
+            outb(0x3F8, *message++);
+        }
+    }   
+
 private:
     static inline LogLevel current_log_level = INFO; 
 
@@ -116,6 +132,10 @@ private:
         set_text_color(color & 0x0F);
         set_text_bg_color((color >> 4) & 0x0F);
     }
+
+
 };
+
+
 
 #endif // LOGGER_H
