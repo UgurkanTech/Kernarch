@@ -6,19 +6,39 @@
 #include "idt.h"
 #include "pic.h"
 
-struct interrupt_frame {
-    uint32_t ds;                                     // Data segment selector
-    uint32_t edi, esi, ebp, esp, ebx, edx, ecx, eax; // Pushed by pusha
-    uint32_t int_no, err_code;                       // Interrupt number and error code
-    uint32_t eip, cs, eflags, useresp, ss;           // Pushed by the processor automatically
+struct __attribute__((packed)) interrupt_frame {
+    uint32_t isr_esp;     // 0: ESP from interrupt_wrapper
+    uint32_t gs;          // 4: GS segment
+    uint32_t fs;          // 8: FS segment
+    uint32_t es;          // 12: ES segment
+    uint32_t ds;          // 16: DS segment
+
+    uint32_t edi;         // 20: EDI register
+    uint32_t esi;         // 24: ESI register
+    uint32_t ebp;         // 28: EBP register
+    uint32_t _;           // 32: Unused (ESP saved by pusha but not used)
+    uint32_t ebx;         // 36: EBX register
+    uint32_t edx;         // 40: EDX register
+    uint32_t ecx;         // 44: ECX register
+    uint32_t eax;         // 48: EAX register
+
+    uint32_t err_code;    // 52: Error code
+
+    uint32_t eip;         // 56: Instruction pointer
+    uint32_t cs;          // 60: Code segment
+    uint32_t eflags;      // 64: CPU flags
+    uint32_t useresp;     // 68: User stack pointer (if privilege change)
+    uint32_t ss;          // 72: Stack segment (if privilege change)
 };
+
+
 
 extern "C" void (*isr_stub_table[])();
 
 extern "C" void isr_install();
-extern "C" void isr_handler(interrupt_frame* frame);
+extern "C" void isr_handler(uint8_t vec, interrupt_frame frame);
 
-
+void print_interrupt_frame(interrupt_frame* frame);
 
 // CPU Exceptions
 enum CPUException {

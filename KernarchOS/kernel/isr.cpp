@@ -20,66 +20,30 @@ const char* exception_messages[] = {
     "Virtualization Exception", "Control Protection Exception"
 };
 
-void log_to_serial(const char* message) {
-    // Write to COM1
-    while (*message) {
-        outb(0x3F8, *message++);
-    }
-}
-
-void print_interrupt_frame(struct interrupt_frame* frame) {
-    char buffer[256];
-
-    format_string(buffer, sizeof(buffer), "Interrupt Frame:\n");
-    log_to_serial(buffer);
-
-    format_string(buffer, sizeof(buffer), "DS: 0x%x\n", frame->ds);
-    log_to_serial(buffer);
-
-    format_string(buffer, sizeof(buffer), "EDI: 0x%x\n", frame->edi);
-    log_to_serial(buffer);
-
-    format_string(buffer, sizeof(buffer), "ESI: 0x%x\n", frame->esi);
-    log_to_serial(buffer);
-
-    format_string(buffer, sizeof(buffer), "EBP: 0x%x\n", frame->ebp);
-    log_to_serial(buffer);
-
-    format_string(buffer, sizeof(buffer), "ESP: 0x%x\n", frame->esp);
-    log_to_serial(buffer);
-
-    format_string(buffer, sizeof(buffer), "EBX: 0x%x\n", frame->ebx);
-    log_to_serial(buffer);
-
-    format_string(buffer, sizeof(buffer), "EDX: 0x%x\n", frame->edx);
-    log_to_serial(buffer);
-
-    format_string(buffer, sizeof(buffer), "ECX: 0x%x\n", frame->ecx);
-    log_to_serial(buffer);
-
-    format_string(buffer, sizeof(buffer), "EAX: 0x%x\n", frame->eax);
-    log_to_serial(buffer);
-
-    format_string(buffer, sizeof(buffer), "Interrupt Number: %d\n", frame->int_no);
-    log_to_serial(buffer);
-
-    format_string(buffer, sizeof(buffer), "Error Code: 0x%x\n", frame->err_code);
-    log_to_serial(buffer);
-
-    format_string(buffer, sizeof(buffer), "EIP: 0x%x\n", frame->eip);
-    log_to_serial(buffer);
-
-    format_string(buffer, sizeof(buffer), "CS: 0x%x\n", frame->cs);
-    log_to_serial(buffer);
-
-    format_string(buffer, sizeof(buffer), "EFLAGS: 0x%x\n", frame->eflags);
-    log_to_serial(buffer);
-
-    format_string(buffer, sizeof(buffer), "User ESP: 0x%x\n", frame->useresp);
-    log_to_serial(buffer);
-
-    format_string(buffer, sizeof(buffer), "SS: 0x%x\n", frame->ss);
-    log_to_serial(buffer);
+void print_interrupt_frame(interrupt_frame* frame) {
+    Logger::serial_log("Interrupt Frame:\n"
+        "DS: 0x%x\n"
+        "EDI: 0x%x\n"
+        "ESI: 0x%x\n"
+        "EBP: 0x%x\n"
+        "ESP: 0x%x\n"
+        "EBX: 0x%x\n"
+        "EDX: 0x%x\n"
+        "ECX: 0x%x\n"
+        "EAX: 0x%x\n"
+        "Interrupt Number: %d\n"
+        "Error Code: 0x%x\n"
+        "EIP: 0x%x\n"
+        "CS: 0x%x\n"
+        "EFLAGS: 0x%x\n"
+        "User ESP: 0x%x\n"
+        "SS: 0x%x\n\n",
+        frame->ds, frame->edi, frame->esi, frame->ebp, frame->_,
+        frame->ebx, frame->edx, frame->ecx, frame->eax,
+        0xffff, frame->err_code,
+        frame->eip, frame->cs, frame->eflags,
+        frame->useresp, frame->ss
+    );
 }
 
 
@@ -124,19 +88,21 @@ void page_fault_handler(interrupt_frame* frame) {
     for(;;);
 }
 
-extern "C" void isr_handler(interrupt_frame* frame) {
-    if (frame->int_no < 32) {
+extern "C" void isr_handler(uint8_t vec, interrupt_frame frame) {
+    uint8_t int_no = vec;
+    if (int_no < 32) {
         // Handle exceptions
-        switch(frame->int_no) {
+        switch(int_no) {
             case EXC_PAGE_FAULT:
-                page_fault_handler(frame);
+                page_fault_handler(&frame);
                 break;
             case EXC_DEBUG:
                 term_print("Debug Interrupt Triggered.\n");
                 break;
             case EXC_DIVIDE_ERROR:
                 term_print("Division by zero exception\n");
-                frame->eip += 2; // Skip the instruction that caused the exception XD
+                //frame->eip += 2; // Skip the instruction that caused the exception XD
+                while(1);
                 break;
 
             case EXC_BOUND_RANGE_EXCEEDED:
@@ -149,30 +115,30 @@ extern "C" void isr_handler(interrupt_frame* frame) {
                 break;
             case EXC_GENERAL_PROTECTION:
                 term_print("General Protection Fault! Halting the system.");
-                print_interrupt_frame(frame);
+                print_interrupt_frame(&frame);
                 while (1);
                 break;
             default:
                 term_print("Unhandled CPU Exception: ");
-                term_print_uint(frame->int_no);
+                term_print_uint(int_no);
                 term_print(" - ");
-                term_print(exception_messages[frame->int_no]);
+                term_print(exception_messages[int_no]);
                 term_print("\n");
-                print_interrupt_frame(frame);
+                print_interrupt_frame(&frame);
                 while (1);
                 break;
         }
 
-        pic_sendEOI(frame->int_no);
-    } else if (frame->int_no < 48) {
+        pic_sendEOI(int_no);
+    } else if (int_no < 48) {
         // Handle hardware interrupts
-        uint8_t irq = frame->int_no - 32;
-        switch (frame->int_no) {
+        uint8_t irq = int_no - 32;
+        switch (int_no) {
             case INT_TIMER:
-                pit_handler();
+                pit_handler(&frame);
                 break;
             case INT_KEYBOARD:
-                Keyboard::handle_interrupt(frame);
+                Keyboard::handle_interrupt(&frame);
                 break;
             case INT_PRIMARY_ATA:
                 ACPI::instance()->handle_primary_ide_interrupt();
@@ -188,28 +154,29 @@ extern "C" void isr_handler(interrupt_frame* frame) {
         }
         pic_sendEOI(irq);
         
-    } else if (frame->int_no < 256) {
+    } else if (int_no < 256) {
         // Handle software interrupts
-        handle_software_interrupt(frame);
+        handle_software_interrupt(int_no, &frame);
+        
     } else {
         term_print("Received unexpected interrupt: ");
         term_print("Frame address: 0x");
-        term_print_hex((uint32_t)frame);
+        term_print_hex((uint32_t)&frame);
         term_print("\nInt No: 0x");
-        term_print_hex(frame->int_no);
+        term_print_hex(int_no);
         term_print(" (");
-        term_print_uint(frame->int_no);
+        term_print_uint(int_no);
         term_print(")\nError code: 0x");
-        term_print_hex(frame->err_code);
+        term_print_hex(frame.err_code);
         term_print("\nEIP: 0x");
-        term_print_hex(frame->eip);
+        term_print_hex(frame.eip);
         term_print("\n");
     }
 }
 extern "C" void (*isr_stub_table[])();
 
 extern "C" void isr_install() {
-    for (int i = 0; i < 48; i++) {
+    for (int i = 0; i < 256; i++) {
         idt_set_gate(i, (uint32_t)isr_stub_table[i], 0x08, 0x8E);
     }
 
