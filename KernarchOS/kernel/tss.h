@@ -32,11 +32,12 @@ struct TSS {
     uint32_t ldt;
     uint16_t trap;
     uint16_t iomap_base;
+    uint8_t io_bitmap[8192]; // I/O permission bitmap
 } __attribute__((packed));
 
 extern TSS tss;
 
-void init_tss(uint32_t kernel_stack);
+void init_tss();
 
 void tss_set_stack(uint32_t kesp);
 
