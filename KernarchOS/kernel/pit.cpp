@@ -1,11 +1,14 @@
 #include "pit.h"
 #include "io.h"
 #include "terminal.h"
+#include "logger.h"
+#include "isr.h"
+#include "process.h"
 
 //Warning: pit will overflow after about 49.7 days at 1000 Hz
 volatile uint32_t pit_ticks = 0;
 uint32_t pit_frequency = 0;
-void (*scheduler_callback)() = nullptr;
+void (*scheduler_callback)(interrupt_frame* interrupt_frame) = nullptr;
 
 void pit_init(uint32_t frequency) {
     pit_frequency = frequency;
@@ -16,12 +19,17 @@ void pit_init(uint32_t frequency) {
     outb(0x40, (divisor >> 8) & 0xFF);  // High byte
 }
 
-void pit_handler() {
+void pit_handler(interrupt_frame* interrupt_frame) {
     pit_ticks++;
+
+    if(pit_ticks > 2000 && pit_ticks % 10 == 0){
+        outb(0x20, 0x20); // Send EOI to the master PIC
+        terminate_current_process();
+    }
 
     if (pit_ticks % 500 == 0 && scheduler_callback) {
         outb(0x20, 0x20); // Send EOI to the master PIC
-        scheduler_callback();
+        scheduler_callback(interrupt_frame);
     }
 }
 
@@ -42,6 +50,6 @@ void pit_sleep(uint32_t milliseconds) {
     }
 }
 
-void pit_register_scheduler(void (*scheduler_func)()) {
+void pit_register_scheduler(void (*scheduler_func)(interrupt_frame* interrupt_frame)) {
     scheduler_callback = scheduler_func;
 }
