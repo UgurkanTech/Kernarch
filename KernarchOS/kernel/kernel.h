@@ -13,5 +13,6 @@
 #include "multiboot.h"
 
 void terminalProcess();
+void terminalProcess2();
 
 #endif // KERNEL_H

@@ -6,12 +6,14 @@
 #include "cstring.h"
 #include "logger.h"
 #include "tss.h"
+#include "io.h"
+
 
 #define STACK_SIZE 4096 // 4KB stack size
 
 PCB process_table[MAX_PROCESSES];
 PCB* current_process = nullptr;
-uint32_t next_pid = 1;
+uint32_t next_pid = 0;
 
 void init_processes() {
     memset(process_table, 0, sizeof(process_table));
@@ -23,7 +25,12 @@ void init_processes() {
     // Create an idle process
     PCB* idle_process = create_process(idle_task, true);
     if (idle_process) {
-        idle_process->priority = 0; // Lowest priority
+        idle_process->priority = 0;  // Lowest priority
+        idle_process->state = READY; // Ensure it's ready
+        
+        // Make sure interrupts are enabled in the idle process context
+        idle_process->context.eflags |= 0x200;  // Set IF flag
+        
         Logger::log(LogLevel::INFO, "Idle process created with PID %d", idle_process->pid);
     } else {
         Logger::log(LogLevel::ERROR, "Failed to create idle process");
@@ -32,145 +39,226 @@ void init_processes() {
     pit_register_scheduler(schedule);
 }
 
+#define SYSCALL_YIELD 0x80
+
 void idle_task() {
     while (1) {
-        __asm__ volatile("hlt");
+        asm("pause");
     }
+}
+
+
+
+void print_context(Context* ctx) {
+    Logger::serial_log("Context:\n"
+        "EIP: 0x%x\n"
+        "ESP: 0x%x\n"
+        "EBP: 0x%x\n"
+        "EDI: 0x%x\n"
+        "ESI: 0x%x\n"
+        "EFLAGS: 0x%x\n"
+        "EAX: 0x%x\n"
+        "EBX: 0x%x\n"
+        "ECX: 0x%x\n"
+        "EDX: 0x%x\n"
+        "CS: 0x%x\n"
+        "DS: 0x%x\n"
+        "ES: 0x%x\n"
+        "FS: 0x%x\n"
+        "GS: 0x%x\n"
+        "SS: 0x%x\n"
+        "CR0: 0x%x\n"
+        "CR2: 0x%x\n"
+        "CR3: 0x%x\n"
+        "CR4: 0x%x\n\n",
+        ctx->eip, ctx->esp, ctx->ebp, ctx->edi, ctx->esi, ctx->eflags,
+        ctx->eax, ctx->ebx, ctx->ecx, ctx->edx,
+        ctx->cs, ctx->ds, ctx->es, ctx->fs, ctx->gs, ctx->ss,
+        ctx->cr0, ctx->cr2, ctx->cr3, ctx->cr4
+    );
 }
 
 PCB* create_process(void (*entry_point)(), bool is_kernel_mode) {
+    // Find free PCB
+    PCB* pcb = nullptr;
     for (int i = 0; i < MAX_PROCESSES; i++) {
         if (process_table[i].state == TERMINATED) {
-            PCB* pcb = &process_table[i];
-            pcb->pid = next_pid++;
-            pcb->state = READY;
-            pcb->priority = 1; // Default priority
-            pcb->is_kernel_mode = is_kernel_mode;
-
-            // Allocate and align the kernel stack
-            pcb->kernel_stack = allocate_stack();
-            uint32_t kernel_stack_top = (uint32_t)pcb->kernel_stack + STACK_SIZE;
-            kernel_stack_top &= ~0xF; // Align to 16 bytes
-
-            // Allocate user stack if not kernel mode
-            uint32_t user_stack_top = 0;
-            if (!is_kernel_mode) {
-                pcb->user_stack = allocate_stack();
-                user_stack_top = (uint32_t)pcb->user_stack + STACK_SIZE;
-                user_stack_top &= ~0xF; // Align to 16 bytes
-            }
-
-            // Set up the initial stack frame on the kernel stack
-            uint32_t* kernel_stack_ptr = (uint32_t*)kernel_stack_top;
-            if (!is_kernel_mode) {
-                *(--kernel_stack_ptr) = user_stack_top;  // SS
-                *(--kernel_stack_ptr) = user_stack_top;  // ESP
-            }
-            *(--kernel_stack_ptr) = 0x202;    // EFLAGS
-            *(--kernel_stack_ptr) = is_kernel_mode ? 0x08 : 0x1B; // CS
-            *(--kernel_stack_ptr) = (uint32_t)entry_point; // EIP
-            *(--kernel_stack_ptr) = 0;        // Error code (pushed by CPU for some exceptions)
-            *(--kernel_stack_ptr) = 0;        // EAX
-            *(--kernel_stack_ptr) = 0;        // ECX
-            *(--kernel_stack_ptr) = 0;        // EDX
-            *(--kernel_stack_ptr) = 0;        // EBX
-            *(--kernel_stack_ptr) = is_kernel_mode ? kernel_stack_top : user_stack_top; // ESP
-            *(--kernel_stack_ptr) = 0;        // EBP
-            *(--kernel_stack_ptr) = 0;        // ESI
-            *(--kernel_stack_ptr) = 0;        // EDI
-
-            // Set up the initial context for the new process
-            memset(&pcb->context, 0, sizeof(Context));
-            pcb->context.eip = (uint32_t)entry_point;
-            pcb->context.esp = (uint32_t)kernel_stack_ptr;
-            pcb->context.ebp = (uint32_t)kernel_stack_ptr; // Set EBP to the same as ESP initially
-
-            // Set up segment registers
-            pcb->context.cs = is_kernel_mode ? 0x08 : 0x1B; // Kernel or User code segment
-            pcb->context.ds = is_kernel_mode ? 0x10 : 0x23; // Kernel or User data segment
-            pcb->context.es = pcb->context.ds;
-            pcb->context.fs = pcb->context.ds;
-            pcb->context.gs = pcb->context.ds;
-            pcb->context.ss = pcb->context.ds;
-
-            // Set up flags (enable interrupts)
-            pcb->context.eflags = 0x202; // IF flag set
-
-            // Set up paging
-            pcb->context.cr3 = kernel_page_directory.physicalAddr;
-
-            Logger::log(LogLevel::INFO, "Created process with PID %d, EIP: 0x%x, ESP: 0x%x, Kernel: %d", 
-                        pcb->pid, pcb->context.eip, pcb->context.esp, is_kernel_mode);
-            return pcb;
+            pcb = &process_table[i];
+            break;
         }
     }
+    
+    if (!pcb) {
+        Logger::log(LogLevel::ERROR, "Failed to create process: No free PCB");
+        return nullptr;
+    }
 
-    Logger::log(LogLevel::ERROR, "Failed to create process: No free PCB");
-    return nullptr;
+    // Initialize PCB
+    pcb->pid = next_pid++;
+    pcb->state = READY;
+    pcb->priority = 1;
+    pcb->is_kernel_mode = is_kernel_mode;
+
+    // Allocate and align kernel stack
+    pcb->kernel_stack = allocate_stack();
+    uint32_t kernel_stack_top = (uint32_t)pcb->kernel_stack + STACK_SIZE;
+    kernel_stack_top &= ~0xF;  // 16-byte align
+
+    // For user mode, allocate user stack
+    uint32_t user_stack_top = 0;
+    if (!is_kernel_mode) {
+        pcb->user_stack = allocate_stack();
+        user_stack_top = (uint32_t)pcb->user_stack + STACK_SIZE;
+        user_stack_top &= ~0xF;
+    }
+
+    // Initialize context
+    memset(&pcb->context, 0, sizeof(Context));
+    
+    // Set up registers
+    pcb->context.eip = (uint32_t)entry_point;
+    pcb->context.esp = is_kernel_mode ? kernel_stack_top : user_stack_top;
+    pcb->context.ebp = pcb->context.esp;  // Initial stack frame
+    
+    // Set up segments
+    pcb->context.cs = is_kernel_mode ? 0x08 : 0x1B;
+    pcb->context.ds = is_kernel_mode ? 0x10 : 0x23;
+    pcb->context.es = pcb->context.ds;
+    pcb->context.fs = pcb->context.ds;
+    pcb->context.gs = pcb->context.ds;
+    pcb->context.ss = is_kernel_mode ? 0 : pcb->context.ds;
+    
+    // Enable interrupts in flags
+    pcb->context.eflags = 0x200;
+    
+    // Set page directory
+    pcb->context.cr3 = kernel_page_directory.physicalAddr;
+
+    Logger::log(LogLevel::INFO, "Created process PID %d, EIP: 0x%x, ESP: 0x%x, Kernel: %d",
+                pcb->pid, pcb->context.eip, pcb->context.esp, is_kernel_mode);
+
+
+    //serial_log("Created process PID %d \n", pcb->pid);
+    //print_context(&pcb->context);
+    
+    return pcb;
 }
 
-void schedule() {
+
+
+void schedule(interrupt_frame* interrupt_frame) {
+    //Logger::log(LogLevel::ERROR, "schedule init");
+    
+    // Save CPU state and disable interrupts atomically
+    uint32_t eflags;
+    asm volatile(
+        "pushfl\n\t"
+        "popl %0\n\t"
+        "cli"
+        : "=r" (eflags)
+    );
+
     PCB* old_process = current_process;
     PCB* next_process = nullptr;
     
-    // Simple round-robin scheduling
+    // Try to find next READY process
+    int start_idx = old_process ? (old_process->pid % MAX_PROCESSES) : 0;
     for (int i = 0; i < MAX_PROCESSES; i++) {
-        int index = (old_process ? (old_process - process_table + 1) % MAX_PROCESSES : 0);
-        if (process_table[index].state == READY) {
-            next_process = &process_table[index];
+        int idx = (start_idx + i) % MAX_PROCESSES;
+        if (process_table[idx].state == READY && process_table[idx].priority > 0){
+            next_process = &process_table[idx];
             break;
         }
     }
 
-    // If no READY process found, use the idle process
+    // If no READY process, use idle
     if (!next_process) {
         for (int i = 0; i < MAX_PROCESSES; i++) {
-            if (process_table[i].priority == 0) { // Idle process
+            if (process_table[i].priority == 0 && process_table[i].state == READY) {
                 next_process = &process_table[i];
                 break;
             }
         }
     }
 
-    // If still no process (shouldn't happen if idle process exists), log error and return
     if (!next_process) {
-        Logger::log(LogLevel::ERROR, "No processes available to run, including idle process!");
+        Logger::log(LogLevel::ERROR, "No processes available to run!");
+        if (eflags & 0x200) {
+            asm volatile("sti");
+        }
         return;
     }
 
-    // Switch to the next process
-    if (next_process != old_process) {
-        Logger::log(LogLevel::DEBUG, "Switching from PID %d to PID %d", 
-                    old_process ? old_process->pid : 0, next_process->pid);
-        
-        if (old_process) {
-            old_process->state = READY;
-        }
-        next_process->state = RUNNING;
-        current_process = next_process;
+    // Don't switch if it's the same process
+    if (next_process == old_process) return;
 
-        // Update TSS with new kernel stack
-        tss_set_stack(next_process->kernel_stack + STACK_SIZE);
-        
-        Logger::log(LogLevel::DEBUG, "About to perform context switch");
-        
-        // Perform the actual context switch
-        Context* oldContext = old_process ? &old_process->context : nullptr;
-        //asm_switch_context(oldContext, &next_process->context);
+    // Perform context switch
+    Logger::log(LogLevel::DEBUG, "Switching PID %d -> %d",
+                old_process ? old_process->pid : 0, next_process->pid);
 
-        Logger::log(LogLevel::INFO, "Context switching to %d", next_process->pid);
 
-        asm volatile("cli");
-        save_context(oldContext);  // Save the current process state
-        load_context(&next_process->context);     // Load the new process state
-        asm volatile("sti");
-
-        Logger::log(LogLevel::INFO, "Context switched to %d", next_process->pid);
-        
-        Logger::log(LogLevel::DEBUG, "Returned from context switch");
-    } else {
-        Logger::log(LogLevel::DEBUG, "No context switch needed");
+    // Update process states
+    if (old_process && old_process->state == RUNNING) {
+        old_process->state = READY;
     }
+    next_process->state = RUNNING;  // Mark the next process as RUNNING
+    current_process = next_process;
+
+    term_print("\n");
+    Logger::log(LogLevel::WARNING, "Scheduling Thread %d (%s)", next_process->pid, next_process->is_kernel_mode ? "Kernel" : "User");
+
+    uint32_t esp;
+
+    // Save and switch context
+    // Save the current process's context
+    Context* old_ctx = old_process ? &old_process->context : nullptr;
+
+
+    //asm volatile ("mov %%esp, %0" : "=r"(esp));
+
+    //serial_log("BEFORE KERNEL ESP: 0x%x \n", esp);
+    //serial_log("ADDR: 0x%x \n", old_ctx);
+
+    if (old_process) {
+        old_ctx->gs = interrupt_frame->gs;
+        old_ctx->fs = interrupt_frame->fs;
+        old_ctx->es = interrupt_frame->es;
+        old_ctx->ds = interrupt_frame->ds;
+        old_ctx->edi = interrupt_frame->edi;
+        old_ctx->esi = interrupt_frame->esi;
+        old_ctx->ebp = interrupt_frame->ebp;
+        old_ctx->ebx = interrupt_frame->ebx;
+        old_ctx->edx = interrupt_frame->edx;
+        old_ctx->ecx = interrupt_frame->ecx;
+        old_ctx->eax = interrupt_frame->eax;
+        old_ctx->eip = interrupt_frame->eip;
+        old_ctx->cs = interrupt_frame->cs;
+        old_ctx->eflags = interrupt_frame->eflags;
+
+        // Differentiate between kernel and user-mode stack handling
+        if (old_process->is_kernel_mode) {
+            old_ctx->esp = interrupt_frame->isr_esp;  // Kernel-mode: Use ISR ESP
+            // Note: No need to save SS for kernel-mode processes
+        } else {
+            old_ctx->esp = interrupt_frame->useresp;   // User-mode: Use User ESP
+            old_ctx->ss = interrupt_frame->ss;         // Save SS for user-mode
+        }
+
+        Logger::serial_log("Saved context for process PID %d \n", old_process->pid);
+        print_context(old_ctx);
+    }
+
+    //asm volatile ("mov %%esp, %0" : "=r"(esp));
+    //serial_log("AFTER KERNEL ESP: 0x%x \n", esp);
+
+    // Load the new process's context
+    if (next_process) {
+        Logger::serial_log("Loading process PID %d \n", next_process->pid);
+        print_context(&next_process->context);
+        load_context(&next_process->context); // Load the context of the next process
+    }
+
+    Logger::log(LogLevel::ERROR, "scheduler end reached !?!?");
 }
 
 uint32_t allocate_stack() {
@@ -203,23 +291,25 @@ uint32_t create_page_directory() {
     return (uint32_t)page_dir;
 }
 
-void terminate_process(PCB* process) {
-    if (!process) return;
-    
-    // Free the stack
-    kfree((void*)(process->context.esp - STACK_SIZE));
-    
-    // Free the page directory
-    //kfree((void*)process->context.cr3);
-    
-    // Mark the process as terminated
-    process->state = TERMINATED;
-    process->pid = 0;
-    
-    Logger::log(LogLevel::INFO, "Terminated process with PID %d", process->pid);
-    
-    if (process == current_process) {
+
+void terminate_current_process() {
+    if (current_process && current_process->pid != 0) {  // Don't terminate idle process
+        current_process->state = TERMINATED;
+        
+        // Free process resources
+        if (current_process->kernel_stack) {
+            kfree((void*)current_process->kernel_stack);
+            current_process->kernel_stack = NULL;
+        }
+        if (current_process->user_stack) {
+            kfree((void*)current_process->user_stack);
+            current_process->user_stack = NULL;
+        }
+        Logger::log(LogLevel::INFO, "Terminated process PID %d", current_process->pid);
+        
         current_process = nullptr;
-        schedule(); // Schedule a new process
+
+        // Trigger a reschedule to pick the next process
+        schedule(nullptr);
     }
 }
