@@ -13,8 +13,7 @@ enum SoftwareInterrupt {
     Sleep = 129,
 };
 
-void handle_software_interrupt(uint8_t int_no, interrupt_frame* frame) ;
-
+void handle_software_interrupt(uint8_t int_no, interrupt_frame* frame);
 
 
 inline void trigger_interrupt(uint8_t interrupt_number) {

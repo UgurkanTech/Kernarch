@@ -104,11 +104,11 @@ void terminalProcess() {
     int a = 99;
     while (true) {
         a++;
-       for (int i = 0; i < 35000000; i++)
+       for (int i = 0; i < 50000000; i++)
             asm volatile ("nop");
-
+        
         term_print_int(a);
-        term_print(".");
+        term_print_colored(".", VGA_LIGHT_RED);
     }
     term_print_int(a);
 }
@@ -118,11 +118,11 @@ void terminalProcess2() {
     int a = 0;
     while (true) {
         a++;
-        for (int i = 0; i < 35000000; i++)
+        for (int i = 0; i < 50000000; i++)
             asm volatile ("nop");
 
         term_print_int(a);
-        term_print(",");
+        term_print_colored(",", VGA_LIGHT_GRAY);
     }
     term_print_int(a);
 }

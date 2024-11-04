@@ -22,11 +22,6 @@ void pit_init(uint32_t frequency) {
 void pit_handler(interrupt_frame* interrupt_frame) {
     pit_ticks++;
 
-    if(pit_ticks > 2000 && pit_ticks % 10 == 0){
-        outb(0x20, 0x20); // Send EOI to the master PIC
-        terminate_current_process();
-    }
-
     if (pit_ticks % 500 == 0 && scheduler_callback) {
         outb(0x20, 0x20); // Send EOI to the master PIC
         scheduler_callback(interrupt_frame);
