@@ -126,7 +126,7 @@ PCB* create_process(void (*entry_point)(), bool is_kernel_mode) {
     pcb->context.es = pcb->context.ds;
     pcb->context.fs = pcb->context.ds;
     pcb->context.gs = pcb->context.ds;
-    pcb->context.ss = is_kernel_mode ? 0 : pcb->context.ds;
+    pcb->context.ss = pcb->context.ds;
     
     // Enable interrupts in flags
     pcb->context.eflags = 0x200;
@@ -235,14 +235,10 @@ void schedule(interrupt_frame* interrupt_frame) {
         old_ctx->cs = interrupt_frame->cs;
         old_ctx->eflags = interrupt_frame->eflags;
 
-        // Differentiate between kernel and user-mode stack handling
-        if (old_process->is_kernel_mode) {
-            old_ctx->esp = interrupt_frame->isr_esp;  // Kernel-mode: Use ISR ESP
-            // Note: No need to save SS for kernel-mode processes
-        } else {
-            old_ctx->esp = interrupt_frame->useresp;   // User-mode: Use User ESP
-            old_ctx->ss = interrupt_frame->ss;         // Save SS for user-mode
-        }
+        old_ctx->esp = interrupt_frame->useresp;
+
+        old_ctx->ss = old_process->is_kernel_mode ? 0x10 : 0x23;
+        
 
         Logger::serial_log("Saved context for process PID %d \n", old_process->pid);
         print_context(old_ctx);

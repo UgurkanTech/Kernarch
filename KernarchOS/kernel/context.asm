@@ -52,26 +52,13 @@ load_context:
     mov dx, [eax + 40]            ; GS at Offset 40
     mov gs, dx
 
-    ; Check if the process is kernel-mode (compare CS to 0x08)
-    cmp word [eax + 32], 0x08     ; CS at Offset 32 for kernel mode
-    je .kernel_mode               ; Jump to kernel mode setup if true
-
-.user_mode:
-    ; For user-mode: Push SS and ESP
-    push dword [eax + 42]         ; SS at Offset 42 (only user-mode)
-    push dword [eax + 12]         ; ESP at Offset 12
-    jmp .common_iret              ; Jump to common iret
-
-.kernel_mode:
-    ; For kernel mode, only push ESP
-    push dword [eax + 12]         ; ESP at Offset 12 (kernel-mode)
-
-.common_iret:
-    ; Common IRET setup for both modes
-    push dword [eax + 48]         ; EFLAGS at Offset 48
-    push dword [eax + 32]         ; CS at Offset 32
-    push dword [eax + 44]         ; EIP at Offset 44
-    mov eax, [eax + 28]           ; EAX at Offset 28
+    ; Push stack, flags, and return info for both modes
+    push dword [eax + 42]         ; SS
+    push dword [eax + 12]         ; ESP
+    push dword [eax + 48]         ; EFLAGS
+    push dword [eax + 32]         ; CS
+    push dword [eax + 44]         ; EIP
+    mov eax, [eax + 28]           ; EAX at Offset 28       ; EAX at Offset 28
 
     sti                            ; Enable interrupts
     iretd                          ; Execute iret to switch context
