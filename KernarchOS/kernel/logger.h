@@ -15,67 +15,66 @@ enum LogLevel {
 
 class Logger {
 public:
-    static void init() {
-        set_log_level(INFO); // Default log level
+    static void setLogLevel(LogLevel level) {
+        currentLogLevel = level;
     }
 
-    static void set_log_level(LogLevel level) {
-        current_log_level = level;
-    }
-
-    static void log(LogLevel level, const char* message) {
-        if (level >= current_log_level) {
-            uint8_t old_color = get_terminal_color();
-            set_log_color(level);
-            term_print(get_level_prefix(level));
-            term_print(message);
-            term_print("\n");
-            restore_color(old_color);
-        }
-    }
-
-    static void debug(const char* message) {
-        log(DEBUG, message);
-    }
-
-    static void info(const char* message) {
-        log(INFO, message);
-    }
-
-    template<typename... Args>
-    static void info(const char* format, Args... args) {
-        char buffer[256];  // Adjust size as needed
-        format_string(buffer, sizeof(buffer), format, args...);
-        log(INFO, buffer);
-    }
-
-    template<typename... Args>
-    static void error(const char* format, Args... args) {
-        char buffer[256];  // Adjust size as needed
-        format_string(buffer, sizeof(buffer), format, args...);
-        log(ERROR, buffer);
-    }
-    template<typename... Args>
+    template <typename... Args>
     static void log(LogLevel level, const char* format, Args... args) {
-        if (level >= current_log_level) {
+        if (level >= currentLogLevel) {
+            uint8_t oldColor = get_terminal_color();
+            set_log_color(level);
+
             char buffer[256];  // Adjust size as needed
-            format_string(buffer, sizeof(buffer), format, args...);
-            log(level, buffer);
+            int length = format_string(buffer, sizeof(buffer), format, args...);
+
+            term_print(getLogLevelPrefix(level));
+            term_print(buffer);
+            term_print("\n");
+
+            restore_color(oldColor);
         }
     }
 
+    template <typename... Args>
+    static void logn(LogLevel level, const char* format, Args... args) {
+        if (level >= currentLogLevel) {
+            uint8_t oldColor = get_terminal_color();
+            set_log_color(level);
 
+            char buffer[256];  // Adjust size as needed
+            int length = format_string(buffer, sizeof(buffer), format, args...);
 
-    static void warning(const char* message) {
-        log(WARNING, message);
+            term_print(getLogLevelPrefix(level));
+            term_print(buffer);
+
+            restore_color(oldColor);
+        }
     }
 
-    static void error(const char* message) {
-        log(ERROR, message);
+    template <typename... Args>
+    static void debug(const char* format, Args... args) {
+        log(DEBUG, format, args...);
     }
 
-    static void critical(const char* message) {
-        log(CRITICAL, message);
+    template <typename... Args>
+    static void info(const char* format, Args... args) {
+        log(INFO, format, args...);
+    }
+
+    template <typename... Args>
+    static void warning(const char* format, Args... args) {
+        log(WARNING, format, args...);
+    }
+
+    template <typename... Args>
+    static void error(const char* format, Args... args) {
+        log(ERROR, format, args...);
+    }
+
+    template <typename... Args>
+    static void critical(const char* format, Args... args) {
+        log(CRITICAL, format, args...);
     }
 
     static void serial_log(const char* format, ...) {
@@ -94,9 +93,9 @@ public:
     }   
 
 private:
-    static inline LogLevel current_log_level = INFO; 
+    static inline LogLevel currentLogLevel = INFO;
 
-    static const char* get_level_prefix(LogLevel level) {
+    static const char* getLogLevelPrefix(LogLevel level) {
         switch (level) {
             case DEBUG:   return "[DEBUG] ";
             case INFO:    return "[INFO] ";
@@ -109,22 +108,15 @@ private:
 
     static void set_log_color(LogLevel level) {
         switch (level) {
-            case DEBUG:
-                set_text_color(VGA_LIGHT_GRAY);
+            case DEBUG:    set_text_color(VGA_LIGHT_GRAY); break;
+            case INFO:     set_text_color(VGA_LIGHT_GREEN); break;
+            case WARNING:  set_text_color(VGA_YELLOW); break;
+            case ERROR:    set_text_color(VGA_LIGHT_RED); break;
+            case CRITICAL: 
+                set_text_color(VGA_WHITE); 
+                set_text_bg_color(VGA_RED); 
                 break;
-            case INFO:
-                set_text_color(VGA_LIGHT_GREEN);
-                break;
-            case WARNING:
-                set_text_color(VGA_YELLOW);
-                break;
-            case ERROR:
-                set_text_color(VGA_LIGHT_RED);
-                break;
-            case CRITICAL:
-                set_text_color(VGA_WHITE);
-                set_text_bg_color(VGA_RED);
-                break;
+            default:       set_text_color(VGA_WHITE); break; // Default case
         }
     }
 
@@ -133,9 +125,6 @@ private:
         set_text_bg_color((color >> 4) & 0x0F);
     }
 
-
 };
-
-
 
 #endif // LOGGER_H
