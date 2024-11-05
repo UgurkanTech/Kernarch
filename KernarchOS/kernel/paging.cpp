@@ -48,7 +48,7 @@ void init_paging() {
             kernel_page_tables[i].pages[j] = addr | 3; // Supervisor, read/write, present
         }
     }
-    Logger::info("First 128MB identity mapped for kernel");
+    Logger::info("First 4GB memory identity mapped for kernel");
 
     
     // Set up user space page tables (16MB to 40MB)
@@ -61,10 +61,8 @@ void init_paging() {
             kernel_page_tables[i].pages[j] = addr | 7; // User, read/write, present
         }
     }
-    Logger::info("128MB-256MB set up for user space");
+    Logger::info("First 4GB memory identity mapped for user space");
     
-    
-
     // Set the page directory
     kernel_page_directory.physicalAddr = (uint32_t)&kernel_page_directory;
 
