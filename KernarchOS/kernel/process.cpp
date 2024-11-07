@@ -192,11 +192,6 @@ void schedule(interrupt_frame* interrupt_frame) {
     // Don't switch if it's the same process
     if (next_process == old_process) return;
 
-    // Perform context switch
-    Logger::log(LogLevel::DEBUG, "Switching PID %d -> %d",
-                old_process ? old_process->pid : 0, next_process->pid);
-
-
     // Update process states
     if (old_process && old_process->state == RUNNING) {
         old_process->state = READY;
