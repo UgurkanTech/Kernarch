@@ -29,8 +29,8 @@ Project Status: [■■■■■■■■■------------------------] 40% Comple
 | ISRs (Interrupt Service Routines)        | ✔️   |
 | Paging                                   | ✔️   |
 | User Mode                                | ✔️   |
+| Process Scheduling                       | ✔️   |
 | IDE Harddisk Driver (FAT32)              | 🟡   |
-| Process Scheduling                       | 🟡   |
 | C Standard Library                       | ❌   |
 | System Calls                             | ❌   |
 | VirtIO Drivers                           | ❌   |

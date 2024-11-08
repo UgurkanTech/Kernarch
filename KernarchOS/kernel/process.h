@@ -74,7 +74,6 @@ void idle_task();
 uint32_t allocate_stack();
 uint32_t create_page_directory();
 
-extern "C" void save_context(Context* context);
 extern "C" void load_context(Context* context);
 
 extern PCB process_table[MAX_PROCESSES];
