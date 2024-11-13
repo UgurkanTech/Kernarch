@@ -6,7 +6,7 @@
 #include "idt.h"
 #include "pic.h"
 
-struct __attribute__((packed)) interrupt_frame {
+typedef struct __attribute__((packed)) interrupt_frame{
     uint32_t isr_esp;     // 0: ESP from interrupt_wrapper
     uint32_t gs;          // 4: GS segment
     uint32_t fs;          // 8: FS segment
@@ -27,9 +27,9 @@ struct __attribute__((packed)) interrupt_frame {
     uint32_t eip;         // 56: Instruction pointer
     uint32_t cs;          // 60: Code segment
     uint32_t eflags;      // 64: CPU flags
-    uint32_t useresp;     // 68: User stack pointer (if privilege change)
+    uint32_t esp;     // 68: User stack pointer (if privilege change)
     uint32_t ss;          // 72: Stack segment (if privilege change)
-};
+} interrupt_frame;
 
 
 

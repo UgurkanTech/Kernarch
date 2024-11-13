@@ -42,7 +42,7 @@ void print_interrupt_frame(interrupt_frame* frame) {
         frame->ebx, frame->edx, frame->ecx, frame->eax,
         0xffff, frame->err_code,
         frame->eip, frame->cs, frame->eflags,
-        frame->useresp, frame->ss
+        frame->esp, frame->ss
     );
 }
 
@@ -62,8 +62,8 @@ void page_fault_handler(interrupt_frame* frame) {
     term_print_hex(frame->cs);
     term_print(" SS: 0x");
     term_print_hex(frame->ss);
-    term_print(" userESP: 0x");
-    term_print_hex(frame->useresp);
+    term_print(" ESP: 0x");
+    term_print_hex(frame->esp);
 
     term_print("\n");
 

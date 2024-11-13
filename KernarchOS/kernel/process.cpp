@@ -8,7 +8,6 @@
 #include "tss.h"
 #include "io.h"
 
-
 #define STACK_SIZE 4096 // 4KB stack size
 
 PCB process_table[MAX_PROCESSES];
@@ -49,7 +48,7 @@ void idle_task() {
 
 
 
-void print_context(Context* ctx) {
+void print_context(interrupt_frame* ctx) {
     Logger::serial_log("Context:\n"
         "EIP: 0x%x\n"
         "ESP: 0x%x\n"
@@ -74,9 +73,10 @@ void print_context(Context* ctx) {
         ctx->eip, ctx->esp, ctx->ebp, ctx->edi, ctx->esi, ctx->eflags,
         ctx->eax, ctx->ebx, ctx->ecx, ctx->edx,
         ctx->cs, ctx->ds, ctx->es, ctx->fs, ctx->gs, ctx->ss,
-        ctx->cr0, ctx->cr2, ctx->cr3, ctx->cr4
+        0,0,0,0
     );
 }
+
 
 PCB* create_process(void (*entry_point)(), bool is_kernel_mode) {
     // Find free PCB
@@ -113,7 +113,7 @@ PCB* create_process(void (*entry_point)(), bool is_kernel_mode) {
     }
 
     // Initialize context
-    memset(&pcb->context, 0, sizeof(Context));
+    memset(&pcb->context, 0, sizeof(interrupt_frame));
     
     // Set up registers
     pcb->context.eip = (uint32_t)entry_point;
@@ -132,7 +132,7 @@ PCB* create_process(void (*entry_point)(), bool is_kernel_mode) {
     pcb->context.eflags = 0x200;
     
     // Set page directory
-    pcb->context.cr3 = kernel_page_directory.physicalAddr;
+    //pcb->context.cr3 = kernel_page_directory.physicalAddr;
 
     Logger::log(LogLevel::INFO, "Created process PID %d, EIP: 0x%x, ESP: 0x%x, Kernel: %d",
                 pcb->pid, pcb->context.eip, pcb->context.esp, is_kernel_mode);
@@ -202,41 +202,38 @@ void schedule(interrupt_frame* interrupt_frame) {
     term_print("\n");
     Logger::log(LogLevel::WARNING, "Scheduling Thread %d (%s)", next_process->pid, next_process->is_kernel_mode ? "Kernel" : "User");
 
-    uint32_t esp;
+    //uint32_t esp;
 
     // Save and switch context
     // Save the current process's context
-    Context* old_ctx = old_process ? &old_process->context : nullptr;
-
 
     //asm volatile ("mov %%esp, %0" : "=r"(esp));
 
     //serial_log("BEFORE KERNEL ESP: 0x%x \n", esp);
     //serial_log("ADDR: 0x%x \n", old_ctx);
 
-    if (old_process) {
-        old_ctx->gs = interrupt_frame->gs;
-        old_ctx->fs = interrupt_frame->fs;
-        old_ctx->es = interrupt_frame->es;
-        old_ctx->ds = interrupt_frame->ds;
-        old_ctx->edi = interrupt_frame->edi;
-        old_ctx->esi = interrupt_frame->esi;
-        old_ctx->ebp = interrupt_frame->ebp;
-        old_ctx->ebx = interrupt_frame->ebx;
-        old_ctx->edx = interrupt_frame->edx;
-        old_ctx->ecx = interrupt_frame->ecx;
-        old_ctx->eax = interrupt_frame->eax;
-        old_ctx->eip = interrupt_frame->eip;
-        old_ctx->cs = interrupt_frame->cs;
-        old_ctx->eflags = interrupt_frame->eflags;
+    if (old_process) {        
+        old_process->context.gs = interrupt_frame->gs;
+        old_process->context.fs = interrupt_frame->fs; // Use old_process instead of old_ctx
+        old_process->context.es = interrupt_frame->es;
+        old_process->context.ds = interrupt_frame->ds;
+        old_process->context.edi = interrupt_frame->edi;
+        old_process->context.esi = interrupt_frame->esi;
+        old_process->context.ebp = interrupt_frame->ebp;
+        old_process->context.ebx = interrupt_frame->ebx;
+        old_process->context.edx = interrupt_frame->edx;
+        old_process->context.ecx = interrupt_frame->ecx;
+        old_process->context.eax = interrupt_frame->eax;
+        old_process->context.eip = interrupt_frame->eip;
+        old_process->context.cs = interrupt_frame->cs;
+        old_process->context.eflags = interrupt_frame->eflags;
 
-        old_ctx->esp = interrupt_frame->useresp;
+        old_process->context.esp = interrupt_frame->esp;
 
-        old_ctx->ss = old_process->is_kernel_mode ? 0x10 : 0x23;
+        old_process->context.ss = old_process->is_kernel_mode ? 0x10 : 0x23;
         
-
         Logger::serial_log("Saved context for process PID %d \n", old_process->pid);
-        print_context(old_ctx);
+        print_context(&old_process->context); // Pass the context directly
     }
 
     //asm volatile ("mov %%esp, %0" : "=r"(esp));

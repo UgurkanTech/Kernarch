@@ -7,30 +7,30 @@ load_context:
     mov eax, [esp + 4]            ; Get context pointer from argument
 
     ; Load general-purpose registers
-    mov edi, [eax + 0]            ; EDI at Offset 0
-    mov esi, [eax + 4]            ; ESI at Offset 4
-    mov ebp, [eax + 8]            ; EBP at Offset 8
-    mov ebx, [eax + 16]           ; EBX at Offset 16
-    mov edx, [eax + 20]           ; EDX at Offset 20
-    mov ecx, [eax + 24]           ; ECX at Offset 24
+    mov edi, [eax + 20]            ; EDI at Offset 0
+    mov esi, [eax + 24]            ; ESI at Offset 4
+    mov ebp, [eax + 28]            ; EBP at Offset 8
+    mov ebx, [eax + 36]           ; EBX at Offset 16
+    mov edx, [eax + 40]           ; EDX at Offset 20
+    mov ecx, [eax + 44]           ; ECX at Offset 24
 
     ; Load segment registers
-    mov dx, [eax + 34]            ; DS at Offset 34
+    mov dx, [eax + 16]            ; DS at Offset 34
     mov ds, dx
-    mov dx, [eax + 36]            ; ES at Offset 36
+    mov dx, [eax + 12]            ; ES at Offset 36
     mov es, dx
-    mov dx, [eax + 38]            ; FS at Offset 38
+    mov dx, [eax + 8]            ; FS at Offset 38
     mov fs, dx
-    mov dx, [eax + 40]            ; GS at Offset 40
+    mov dx, [eax + 4]            ; GS at Offset 40
     mov gs, dx
 
     ; Push stack, flags, and return info for both modes
-    push dword [eax + 42]         ; SS
-    push dword [eax + 12]         ; ESP
-    push dword [eax + 48]         ; EFLAGS
-    push dword [eax + 32]         ; CS
-    push dword [eax + 44]         ; EIP
-    mov eax, [eax + 28]           ; EAX at Offset 28       ; EAX at Offset 28
+    push dword [eax + 72]         ; SS
+    push dword [eax + 68]         ; ESP
+    push dword [eax + 64]         ; EFLAGS
+    push dword [eax + 60]         ; CS
+    push dword [eax + 56]         ; EIP
+    mov eax, [eax + 48]           ; EAX at Offset 28       ; EAX at Offset 28
 
     sti                            ; Enable interrupts
     iretd                          ; Execute iret to switch context
