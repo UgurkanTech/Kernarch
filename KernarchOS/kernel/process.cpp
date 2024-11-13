@@ -213,22 +213,7 @@ void schedule(interrupt_frame* interrupt_frame) {
     //serial_log("ADDR: 0x%x \n", old_ctx);
 
     if (old_process) {        
-        old_process->context.gs = interrupt_frame->gs;
-        old_process->context.fs = interrupt_frame->fs; // Use old_process instead of old_ctx
-        old_process->context.es = interrupt_frame->es;
-        old_process->context.ds = interrupt_frame->ds;
-        old_process->context.edi = interrupt_frame->edi;
-        old_process->context.esi = interrupt_frame->esi;
-        old_process->context.ebp = interrupt_frame->ebp;
-        old_process->context.ebx = interrupt_frame->ebx;
-        old_process->context.edx = interrupt_frame->edx;
-        old_process->context.ecx = interrupt_frame->ecx;
-        old_process->context.eax = interrupt_frame->eax;
-        old_process->context.eip = interrupt_frame->eip;
-        old_process->context.cs = interrupt_frame->cs;
-        old_process->context.eflags = interrupt_frame->eflags;
-
-        old_process->context.esp = interrupt_frame->esp;
+        old_process->context = *interrupt_frame;
 
         old_process->context.ss = old_process->is_kernel_mode ? 0x10 : 0x23;
         
@@ -256,27 +241,6 @@ uint32_t allocate_stack() {
         return 0;
     }
     return (uint32_t)stack;
-}
-
-uint32_t create_page_directory() {
-    uint32_t* page_dir = (uint32_t*)kmalloc(4096); // 4KB aligned
-    if (!page_dir) {
-        Logger::log(LogLevel::ERROR, "Failed to allocate page directory");
-        return 0;
-    }
-    
-    // Initialize page directory
-    memset(page_dir, 0, 4096);
-    
-    // Map all 4GB of address space
-    for (uint32_t i = 0; i < 1024; i++) {
-        // 0x87: Present, Read/Write, User, 4MB pages
-        page_dir[i] = (i * 0x400000) | 0x87;
-    }
-    
-    Logger::log(LogLevel::INFO, "Created page directory at 0x%x", (uint32_t)page_dir);
-    
-    return (uint32_t)page_dir;
 }
 
 

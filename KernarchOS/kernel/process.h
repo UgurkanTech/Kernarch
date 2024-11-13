@@ -41,7 +41,6 @@ void terminate_current_process();
 
 void idle_task();
 uint32_t allocate_stack();
-uint32_t create_page_directory();
 
 extern "C" void load_context(interrupt_frame* context);
 
