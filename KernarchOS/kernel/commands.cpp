@@ -2,7 +2,6 @@
 #include "terminal.h"
 #include "cstring.h"
 #include "memory.h"
-#include "acpi.h"
 #include "io.h"
 
 using namespace std;
@@ -62,8 +61,7 @@ void Commands::echo(const char* args) {
 
 
 void Commands::systeminfo(const char*) {
-    ACPI::instance()->print_system_info();
-    ACPI::instance()->print_drive_info();
+    term_print("Unknown\n");
 }
 
 void Commands::clear(const char* args) {

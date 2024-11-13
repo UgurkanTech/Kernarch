@@ -9,11 +9,8 @@
 #include "keyboard.h"
 #include "logger.h"
 #include "commands.h"
-#include "acpi.h"
 #include "cstring.h"
 #include "tss.h"
-#include "disk.h"
-#include "fat32.h"
 #include "process.h"
 
 //Temporary stack allocator which will be replaced later..

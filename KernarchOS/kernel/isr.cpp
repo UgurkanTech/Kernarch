@@ -5,7 +5,6 @@
 #include "terminal.h"
 #include "keyboard.h"
 #include "interrupts.h"
-#include "acpi.h"
 #include "kernel_config.h"
 #include "io.h"
 #include "string_utils.h"
@@ -141,10 +140,8 @@ extern "C" void isr_handler(uint8_t vec, interrupt_frame frame) {
                 Keyboard::handle_interrupt(&frame);
                 break;
             case INT_PRIMARY_ATA:
-                ACPI::instance()->handle_primary_ide_interrupt();
                 break;
             case INT_SECONDARY_ATA:
-                ACPI::instance()->handle_secondary_ide_interrupt();
                 break;
             default:
                 term_print("Unhandled hardware interrupt: ");
