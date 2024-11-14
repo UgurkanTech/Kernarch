@@ -7,7 +7,7 @@
 #include "pic.h"
 #include "logger.h"
 
-typedef struct __attribute__((packed)) interrupt_frame{
+typedef struct __attribute__((packed, aligned(4))) interrupt_frame{
     uint32_t isr_esp;     // 0: ESP from interrupt_wrapper
     uint32_t gs;          // 4: GS segment
     uint32_t fs;          // 8: FS segment
@@ -30,7 +30,9 @@ typedef struct __attribute__((packed)) interrupt_frame{
     uint32_t eflags;      // 64: CPU flags
     uint32_t esp;         // 68: User stack pointer (if privilege change)
     uint32_t ss;          // 72: Stack segment (if privilege change)
-} interrupt_frame;
+} interruptFrame;
+
+
 
 extern "C" void (*isr_stub_table[])();
 

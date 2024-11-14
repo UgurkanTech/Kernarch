@@ -8,6 +8,7 @@
 #include "kernel_config.h"
 #include "io.h"
 #include "string_utils.h"
+#include "types.h"
 
 static interrupt_handler_t handlers[256][MAX_HANDLERS_PER_INTERRUPT];
 static uint8_t handler_counts[256];
@@ -25,7 +26,7 @@ extern "C" void isr_install() {
         }
     }
 
-    register_interrupt_handler(0x80, yield_interrupt);
+    register_interrupt_handler(0x80, syscall_handler);
 }
 
 static interrupt_type_t get_interrupt_type(uint8_t vector) {

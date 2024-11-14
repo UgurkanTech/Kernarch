@@ -33,13 +33,13 @@ void Commands::execute(const char* command) {
             return;
         }
     }
-    term_print_colored("Unknown command: ", VGA_LIGHT_RED);
-    term_print(command);
-    term_print("\n");
+    term_print_colored("\nUnknown command: ", VGA_LIGHT_RED);
+    term_printf("%s \n", command);
+
 }
 
 void Commands::help() {
-    term_print_colored("Available commands:\n", VGA_YELLOW);
+    term_print_colored("\nAvailable commands:\n", VGA_YELLOW);
     for (int i = 0; i < command_count; i++) {
         term_print("  ");
         term_print_colored(command_list[i].name, VGA_LIGHT_GREEN);
@@ -55,8 +55,7 @@ void Commands::help() {
 
 // Implement your command functions here
 void Commands::echo(const char* args) {
-    term_print(args);
-    term_print("\n");
+    term_printf("%s \n", args);
 }
 
 
@@ -71,6 +70,7 @@ void Commands::clear(const char* args) {
 
 void Commands::meminfo(const char* args) {
     (void)args;
+    term_print("\n");
     print_memory_info();
 }
 

@@ -16,12 +16,10 @@ const char Keyboard::scancode_to_ascii[] = {
 };
 
 void Keyboard::init() {
-    // Any initialization
+    register_interrupt_handler(INT_KEYBOARD, handle_interrupt);
 }
 
 void Keyboard::handle_interrupt(interrupt_frame* frame) {
-    (void)frame; // Indicate that we're intentionally not using the parameter
-
     uint8_t scancode = inb(KEYBOARD_DATA_PORT);
      // Check if it's a key press (ignore key release)
     if (!(scancode & 0x80)) {
@@ -29,7 +27,6 @@ void Keyboard::handle_interrupt(interrupt_frame* frame) {
             char ascii = scancode_to_ascii[scancode];
             if (ascii != 0) {
                 enqueue_char(ascii);
-                // Remove this line: term_putc(ascii);
             }
         }
     }
@@ -38,7 +35,7 @@ void Keyboard::handle_interrupt(interrupt_frame* frame) {
 char Keyboard::get_char() {
     while (!has_char()) {
         // Wait for a character
-        asm volatile("hlt");
+        asm volatile("nop");
     }
     return dequeue_char();
 }
