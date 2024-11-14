@@ -16,6 +16,9 @@ enum SoftwareInterrupt {
 void handle_software_interrupt(uint8_t int_no, interrupt_frame* frame);
 
 
+void yield_interrupt(interrupt_frame* frame);
+
+
 inline void trigger_interrupt(uint8_t interrupt_number) {
     asm volatile ("int %0" : : "N" (interrupt_number));
 }

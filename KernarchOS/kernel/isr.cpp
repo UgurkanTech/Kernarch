@@ -14,7 +14,7 @@ static uint8_t handler_counts[256];
 
 extern "C" void isr_install() {
     for (int i = 0; i < 256; i++) {
-        idt_set_gate(i, (uint32_t)isr_stub_table[i], 0x08, 0x8E);
+        idt_set_gate(i, (uint32_t)isr_stub_table[i], 0x08, 0xEE);
     }
     //idt_set_gate(0x80, (uint32_t)isr_stub_table[128], 0x08, 0xEE);  // User mode accessible
 
@@ -24,6 +24,8 @@ extern "C" void isr_install() {
             handlers[i][j] = NULL;
         }
     }
+
+    register_interrupt_handler(0x80, yield_interrupt);
 }
 
 static interrupt_type_t get_interrupt_type(uint8_t vector) {
