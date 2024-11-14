@@ -103,16 +103,7 @@ void multiboot_scan(multiboot_info_t* mbd, unsigned int magic){
     {
         multiboot_memory_map_t* mmmt = (multiboot_memory_map_t*) (mbd->mmap_addr + i);
 
-        term_print("Start Addr: ");
-        term_print_hex(mmmt->addr);
-        term_print(" | Length: ");
-        term_print_hex(mmmt->len);
-        term_print(" | Size: ");
-        term_print_hex(mmmt->size);
-        term_print(" | Type: ");
-        term_print_hex(mmmt->type);
-        term_print("\n");
-
+        term_printf("Start Addr: %x | Length: %x | Size: %x | Type: %x\n", mmmt->addr, mmmt->len, mmmt->size, mmmt->type);
 
         if(mmmt->type == MULTIBOOT_MEMORY_AVAILABLE) {
 
@@ -160,7 +151,7 @@ void* kmalloc(size_t size) {
 
     // If we reach here, we couldn't find a suitable block
     term_print("kmalloc failed: Out of memory. Requested size: ");
-    term_print_int(size);
+    term_printf("%d", size);
     term_print("\n");
 
     // Trigger software interrupt for out of memory
@@ -217,15 +208,7 @@ void print_heap_info() {
 
     while (current) {
         block_count++;
-        term_print("  Block ");
-        term_print_int(block_count);
-        term_print(": Address ");
-        term_print_hex((uint32_t)current);
-        term_print(", Size ");
-        term_print_int(current->size);
-        term_print(", Is Free ");
-        term_print_int(current->free);
-        term_print("\n");
+        term_printf("  Block %d : Address %x, Size %d, Is Free %d \n", block_count, (uint32_t)current, current->size, current->free);
 
         if (current->free) {
             free_memory += current->size;
@@ -235,13 +218,9 @@ void print_heap_info() {
         current = current->next;
     }
 
-    term_print("  Total blocks: ");
-    term_print_int(block_count);
-    term_print("\n  Free memory: ");
-    term_print_int(free_memory);
-    term_print(" bytes\n  Used memory: ");
-    term_print_int(used_memory);
-    term_print(" bytes\n");
+    term_printf("  Total blocks: %d \n", block_count);
+    term_printf("  Free memory: %d \n", free_memory);
+    term_printf("  Used memory: %d \n", used_memory);
 }
 
 
@@ -290,7 +269,7 @@ void print_memory_info(){
     Logger::log(LogLevel::INFO, "  Block Count: %d", block_count);
 
     Logger::log(LogLevel::INFO, "Stack Information:");
-    print_memory_size("  Used", get_stack_usage());
+    print_memory_size("  Used", get_stack_usage()); //fix this
     print_memory_size("  Total", get_total_stack_size());
 }
 
