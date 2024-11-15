@@ -23,4 +23,15 @@ inline void trigger_interrupt(uint8_t interrupt_number) {
     asm volatile ("int %0" : : "N" (interrupt_number));
 }
 
+// Define the system call interrupt number
+#define SYSCALL_INT 0x80
+
+// Define system call numbers
+#define SYSCALL_PRINT 1
+
+// Function prototype for printf system call
+void sys_printf(const char* format, ...);
+
+void syscall_handler(interrupt_frame* frame);
+
 #endif // INTERRUPTS_H
