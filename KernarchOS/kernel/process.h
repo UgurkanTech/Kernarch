@@ -32,6 +32,7 @@ struct PCB {
     bool is_kernel_mode;
     uint32_t kernel_stack;
     uint32_t user_stack;
+    uint32_t kernel_esp;
 };
 
 void init_processes();
