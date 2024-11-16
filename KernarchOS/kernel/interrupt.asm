@@ -1,6 +1,7 @@
 section .text
 %macro int_vector_macro 1
   int_vector_handler_%1:
+  cli
   %if !(%1 == 8 || (%1 >= 10 && %1 <= 14) || %1 == 17 || %1 == 30)
     push 0xFFFFFFFF ; dummy error code
   %endif
