@@ -1,18 +1,19 @@
 // process.cpp
 #include "process.h"
 #include "memory.h"
-#include "interrupts.h"
 #include "paging.h"
 #include "cstring.h"
 #include "logger.h"
 #include "tss.h"
 #include "io.h"
+#include "pit.h"
 
-#define STACK_SIZE 4096 // 4KB stack size
+#define STACK_SIZE 8192 // 8KB stack size
 
 PCB process_table[MAX_PROCESSES];
 PCB* current_process = nullptr;
 uint32_t next_pid = 0;
+
 
 void init_processes() {
     memset(process_table, 0, sizeof(process_table));
@@ -44,37 +45,6 @@ void idle_task() {
     while (1) {
         asm("pause");
     }
-}
-
-
-
-void print_context(interrupt_frame* ctx) {
-    Logger::serial_log("Context:\n"
-        "EIP: 0x%x\n"
-        "ESP: 0x%x\n"
-        "EBP: 0x%x\n"
-        "EDI: 0x%x\n"
-        "ESI: 0x%x\n"
-        "EFLAGS: 0x%x\n"
-        "EAX: 0x%x\n"
-        "EBX: 0x%x\n"
-        "ECX: 0x%x\n"
-        "EDX: 0x%x\n"
-        "CS: 0x%x\n"
-        "DS: 0x%x\n"
-        "ES: 0x%x\n"
-        "FS: 0x%x\n"
-        "GS: 0x%x\n"
-        "SS: 0x%x\n"
-        "CR0: 0x%x\n"
-        "CR2: 0x%x\n"
-        "CR3: 0x%x\n"
-        "CR4: 0x%x\n\n",
-        ctx->eip, ctx->esp, ctx->ebp, ctx->edi, ctx->esi, ctx->eflags,
-        ctx->eax, ctx->ebx, ctx->ecx, ctx->edx,
-        ctx->cs, ctx->ds, ctx->es, ctx->fs, ctx->gs, ctx->ss,
-        0,0,0,0
-    );
 }
 
 
@@ -150,13 +120,8 @@ void schedule(interrupt_frame* interrupt_frame) {
     //Logger::log(LogLevel::ERROR, "schedule init");
     
     // Save CPU state and disable interrupts atomically
-    uint32_t eflags;
-    asm volatile(
-        "pushfl\n\t"
-        "popl %0\n\t"
-        "cli"
-        : "=r" (eflags)
-    );
+    uint32_t eflags = 0x200;
+    asm volatile("cli");
 
     PCB* old_process = current_process;
     PCB* next_process = nullptr;
@@ -171,7 +136,21 @@ void schedule(interrupt_frame* interrupt_frame) {
         }
     }
 
-    // If no READY process, use idle
+    // If not READY, maybe one running? Keep it running.
+    if (!next_process) {
+        for (int i = 0; i < MAX_PROCESSES; i++) {
+            if (process_table[i].priority == 1 && process_table[i].state == RUNNING) {
+                if(old_process->pid == process_table[i].pid){
+                    asm volatile("sti");
+                    return;
+                }
+                    
+                break;
+            }
+        }
+    }
+
+        // If no READY process, use idle
     if (!next_process) {
         for (int i = 0; i < MAX_PROCESSES; i++) {
             if (process_table[i].priority == 0 && process_table[i].state == READY) {
@@ -182,10 +161,12 @@ void schedule(interrupt_frame* interrupt_frame) {
     }
 
     if (!next_process) {
-        Logger::log(LogLevel::ERROR, "No processes available to run!");
-        if (eflags & 0x200) {
-            asm volatile("sti");
-        }
+        if (old_process->pid == 0)
+            Logger::log(LogLevel::DEBUG, "System is idle.");
+        else   
+            Logger::log(LogLevel::ERROR, "No processes available to execute!");
+
+        asm volatile("sti");
         return;
     }
 
@@ -199,26 +180,31 @@ void schedule(interrupt_frame* interrupt_frame) {
     next_process->state = RUNNING;  // Mark the next process as RUNNING
     current_process = next_process;
 
-    term_print("\n");
-    Logger::log(LogLevel::WARNING, "Scheduling Thread %d (%s)", next_process->pid, next_process->is_kernel_mode ? "Kernel" : "User");
+    //term_print("\n");
+    //Logger::log(LogLevel::DEBUG, "Scheduling Thread %d (%s)", next_process->pid, next_process->is_kernel_mode ? "Kernel" : "User");
 
-    //uint32_t esp;
+    uint32_t esp;
 
-    // Save and switch context
-    // Save the current process's context
+    Logger::serial_log("================================\n");
+    
+    asm volatile ("mov %%esp, %0" : "=r"(esp));
+    Logger::serial_log("BEFORE KERNEL ESP: 0x%x \n", esp);
 
-    //asm volatile ("mov %%esp, %0" : "=r"(esp));
+    if (old_process) {
+        interruptFrame* old_ctx = &old_process->context;    
+        *old_ctx = *interrupt_frame;
 
-    //serial_log("BEFORE KERNEL ESP: 0x%x \n", esp);
-    //serial_log("ADDR: 0x%x \n", old_ctx);
+        old_ctx->ss = old_process->is_kernel_mode ? 0x10 : 0x23;
+        old_ctx->cs = old_process->is_kernel_mode ? 0x08 : 0x1B;
 
-    if (old_process) {        
-        old_process->context = *interrupt_frame;
+        // Calculate stack usage
+        uint32_t stack_usage = (((uint32_t)old_process->user_stack + STACK_SIZE) & ~0xF) - (uint32_t)old_ctx->esp;
+        Logger::serial_log("Stack Usage: %d bytes\n", stack_usage);
 
-        old_process->context.ss = old_process->is_kernel_mode ? 0x10 : 0x23;
-        
+
         Logger::serial_log("Saved context for process PID %d \n", old_process->pid);
-        print_context(&old_process->context); // Pass the context directly
+        //print_interrupt_frame(&old_process->context); // Pass the context directly
+        Logger::serial_log("Saved ESP: 0x%x \n", old_process->context.esp);
     }
 
     //asm volatile ("mov %%esp, %0" : "=r"(esp));
@@ -227,11 +213,16 @@ void schedule(interrupt_frame* interrupt_frame) {
     // Load the new process's context
     if (next_process) {
         Logger::serial_log("Loading process PID %d \n", next_process->pid);
-        print_context(&next_process->context);
+        //print_interrupt_frame(&next_process->context);
+
+        Logger::serial_log("Loading ESP: 0x%x \n", next_process->context.esp);
+        uint32_t kernel_stack_top = (uint32_t)next_process->kernel_stack + STACK_SIZE;
+        kernel_stack_top &= ~0xF;  // 16-byte align
+        tss_set_stack(kernel_stack_top);
         load_context(&next_process->context); // Load the context of the next process
     }
 
-    Logger::log(LogLevel::ERROR, "scheduler end reached !?!?");
+    Logger::serial_log("scheduler end reached !?!?");
 }
 
 uint32_t allocate_stack() {

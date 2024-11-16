@@ -1,36 +1,39 @@
 section .text
 global load_context
 
-; load_context(Context* context)
-; Does not return to caller, switches to new context
+; load_context(interrupt_frame* context)
+; Does not return - switches directly to new context
 load_context:
-    cli
-    mov eax, [esp + 4]            ; Get context pointer from argument
-
-    ; Load general-purpose registers
-    mov edi, [eax + 20]           ; EDI at Offset 20
-    mov esi, [eax + 24]           ; ESI at Offset 24
-    mov ebp, [eax + 28]           ; EBP at Offset 28
-    mov ebx, [eax + 36]           ; EBX at Offset 36
-    mov edx, [eax + 40]           ; EDX at Offset 40
-    mov ecx, [eax + 44]           ; ECX at Offset 44
-
-    ; Load segment registers
-    mov dx, [eax + 16]            ; DS at Offset 16
-    mov ds, dx
-    mov dx, [eax + 12]            ; ES at Offset 12
-    mov es, dx
-    mov dx, [eax + 8]             ; FS at Offset 8
-    mov fs, dx
-    mov dx, [eax + 4]             ; GS at Offset 4
-    mov gs, dx
-
-    ; Push stack, flags, and return info for both modes
-    push dword [eax + 72]         ; SS at Offset 72
-    push dword [eax + 68]         ; ESP at Offset 68
-    push dword [eax + 64]         ; EFLAGS at Offset 64
-    push dword [eax + 60]         ; CS at Offset 60
-    push dword [eax + 56]         ; EIP at Offset 56
-    mov eax, [eax + 48]           ; EAX at Offset 48
+    cli                           ; Ensure interrupts are disabled
+    mov eax, [esp + 4]           ; Get context pointer parameter
     
-    iretd                          ; Execute iret to switch context
+    ; Load all segment registers first
+    mov dx, [eax + 16]           ; DS offset 16
+    mov ds, dx
+    mov dx, [eax + 12]           ; ES offset 12
+    mov es, dx
+    mov dx, [eax + 8]            ; FS offset 8
+    mov fs, dx
+    mov dx, [eax + 4]            ; GS offset 4
+    mov gs, dx
+    
+    ; Load general registers
+    mov edi, [eax + 20]          ; EDI offset 20
+    mov esi, [eax + 24]          ; ESI offset 24
+    mov ebx, [eax + 36]          ; EBX offset 36
+    mov edx, [eax + 40]          ; EDX offset 40
+    mov ecx, [eax + 44]          ; ECX offset 44
+    
+    ; Set up stack for iretd
+    push dword [eax + 72]        ; SS offset 72
+    push dword [eax + 68]        ; ESP offset 68
+    push dword [eax + 64]        ; EFLAGS offset 64
+    push dword [eax + 60]        ; CS offset 60
+    push dword [eax + 56]        ; EIP offset 56
+    
+    ; Load EBP and EAX last
+    mov ebp, [eax + 28]          ; EBP offset 28
+    mov eax, [eax + 48]          ; EAX offset 48
+    
+    ; Switch context
+    iretd
