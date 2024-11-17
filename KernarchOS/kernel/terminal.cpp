@@ -181,9 +181,22 @@ void term_printf_at_input_line(const char* format, ...) {
 void term_print(const char* str) {
     if (!str) return;
     mutex.lock();
+    const uint8_t saved_color = term_color;  // Save original color
+    
     for (size_t i = 0; str[i] != '\0'; i++) {
+        if (str[i] == '&' && str[i + 1] != '\0') {
+            // Check if next character is a digit between 0-9
+            if (str[i + 1] >= '0' && str[i + 1] <= '9') {
+                uint8_t color = str[i + 1] - '0';  // Convert char to number
+                term_color = (term_color & 0xF0) | (color & 0x0F);  // Update foreground color
+                i++;  // Skip the color code character
+                continue;
+            }
+        }
         term_putc(str[i]);
     }
+    
+    term_color = saved_color;  // Restore original color
     mutex.unlock();
 }
 
@@ -201,23 +214,6 @@ void term_printf(const char* format, ...) {
     
     if (length > 0) {
         term_print(buffer);
-    }
-}
-
-//For debugging. Do not use.
-void term_unlocked_printf(const char* format, ...) {
-    if (!format) return;
-    char buffer[256];
-    va_list args;
-    va_start(args, format);
-    
-    int length = vformat_string(buffer, sizeof(buffer), format, args);
-    va_end(args);
-
-    if (length > 0) {
-        for (size_t i = 0; buffer[i] != '\0'; i++) {
-            term_putc(buffer[i]);
-        }
     }
 }
 
