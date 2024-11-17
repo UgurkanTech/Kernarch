@@ -139,11 +139,12 @@ inline static void print_interrupt_frame(interrupt_frame* ctx, uint8_t vec = 0xF
         "GS:      0x%x\n"
         "FS:      0x%x\n"
         "ES:      0x%x\n"
-        "DS:      0x%x\n",
+        "DS:      0x%x\n"
+        "ISR_ESP  0x%x\n",
         ctx->eip, ctx->cs, ctx->eflags, ctx->esp, ctx->ss,
         ctx->eax, ctx->ebx, ctx->ecx, ctx->edx,
         ctx->esi, ctx->edi, ctx->ebp,
-        ctx->gs, ctx->fs, ctx->es, ctx->ds
+        ctx->gs, ctx->fs, ctx->es, ctx->ds, ctx->isr_esp
     );
 
     if (ctx->err_code != 0xFFFFFFFF) {
