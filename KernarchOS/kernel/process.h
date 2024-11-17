@@ -29,14 +29,13 @@ struct PCB {
     uint32_t base_address;
     uint32_t limit;
     uint32_t *page_table;
-    bool is_kernel_mode;
     uint32_t kernel_stack;
     uint32_t user_stack;
     uint32_t kernel_esp;
 };
 
 void init_processes();
-PCB* create_process(void (*entry_point)(), bool is_kernel_mode);
+PCB* create_process(void (*entry_point)());
 void schedule(interrupt_frame* interrupt_frame);
 void terminate_current_process();
 

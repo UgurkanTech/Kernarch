@@ -23,7 +23,7 @@ void init_processes() {
     }
     
     // Create an idle process
-    PCB* idle_process = create_process(idle_task, true);
+    PCB* idle_process = create_process(idle_task);
     if (idle_process) {
         idle_process->priority = 0;  // Lowest priority
         idle_process->state = READY; // Ensure it's ready
@@ -47,8 +47,7 @@ void idle_task() {
     }
 }
 
-
-PCB* create_process(void (*entry_point)(), bool is_kernel_mode) {
+PCB* create_process(void (*entry_point)()) {
     // Find free PCB
     PCB* pcb = nullptr;
     for (int i = 0; i < MAX_PROCESSES; i++) {
@@ -67,49 +66,49 @@ PCB* create_process(void (*entry_point)(), bool is_kernel_mode) {
     pcb->pid = next_pid++;
     pcb->state = READY;
     pcb->priority = 1;
-    pcb->is_kernel_mode = is_kernel_mode;
+
+        // Initialize context
+    memset(&pcb->context, 0, sizeof(interrupt_frame));
 
     // Always allocate kernel stack for both Ring 0 and Ring 3
     pcb->kernel_stack = allocate_stack();
     uint32_t kernel_stack_top = (uint32_t)pcb->kernel_stack + STACK_SIZE;
     kernel_stack_top &= ~0xF;  // 16-byte align
 
+    // Store kernel ESP in PCB for interrupt handling
+    pcb->kernel_esp = kernel_stack_top;
+
     // Always allocate user/task stack for both Ring 0 and Ring 3
     pcb->user_stack = allocate_stack();
     uint32_t user_stack_top = (uint32_t)pcb->user_stack + STACK_SIZE;
     user_stack_top &= ~0xF;  // 16-byte align
 
-    // Initialize context
-    memset(&pcb->context, 0, sizeof(interrupt_frame));
-    
-    // Set up registers - always use task stack as main stack
-    pcb->context.eip = (uint32_t)entry_point;
     pcb->context.esp = user_stack_top;  // Task will run on its "user" stack
     pcb->context.ebp = user_stack_top;  // Initial stack frame
     
-    // Set up segments
-    pcb->context.cs = is_kernel_mode ? 0x08 : 0x1B;  // CS: Kernel or User code segment
-    pcb->context.ds = pcb->context.es = pcb->context.fs = pcb->context.gs = is_kernel_mode ? 0x10 : 0x23;  // DS, ES, FS, GS
-    pcb->context.ss = is_kernel_mode ? 0x10 : 0x23;  // SS: Stack segment for Ring 0 or Ring 3
-    
-    // Enable interrupts and set IOPL for Ring 0
-    pcb->context.eflags = is_kernel_mode ? 0x3202 : 0x202;  // IF + IOPL3 + bit 1 for kernel mode, IF + bit 1 for user mode
+    // Set up registers - always use task stack as main stack
+    pcb->context.eip = (uint32_t)entry_point;
 
-    // Store kernel ESP in PCB for interrupt handling
-    pcb->kernel_esp = kernel_stack_top;
     
+    // Set up segments
+    pcb->context.cs = 0x1B;  // CS: Kernel or User code segment
+    pcb->context.ds = pcb->context.es = pcb->context.fs = pcb->context.gs = 0x23;  // DS, ES, FS, GS
+    pcb->context.ss = 0x23;  // SS: Stack segment for Ring 0 or Ring 3
+    
+    // Enable interrupts
+    pcb->context.eflags = 0x202;  // IF + bit 1 (reserved)
+
     // Set page directory
     //pcb->context.cr3 = kernel_page_directory.physicalAddr;
 
-    Logger::log(LogLevel::INFO, "Created process PID %d, EIP: 0x%x, ESP: 0x%x, Kernel: %d",
-                pcb->pid, pcb->context.eip, pcb->context.esp, is_kernel_mode);
+    Logger::log(LogLevel::INFO, "Created process PID %d, EIP: 0x%x, ESP: 0x%x",
+                pcb->pid, pcb->context.eip, pcb->context.esp);
 
     //serial_log("Created process PID %d \n", pcb->pid);
     //print_context(&pcb->context);
     
     return pcb;
 }
-
 
 
 void schedule(interrupt_frame* interrupt_frame) {
@@ -189,16 +188,15 @@ void schedule(interrupt_frame* interrupt_frame) {
         interruptFrame* old_ctx = &old_process->context;    
         *old_ctx = *interrupt_frame;
 
-        old_ctx->ss = old_process->is_kernel_mode ? 0x10 : 0x23;
-        old_ctx->cs = old_process->is_kernel_mode ? 0x08 : 0x1B;
+        old_ctx->ss = 0x23;
+        old_ctx->cs = 0x1B;
 
         // Calculate stack usage
-        //uint32_t stack_usage = (((uint32_t)old_process->user_stack + STACK_SIZE) & ~0xF) - (uint32_t)old_ctx->esp;
-        //Logger::serial_log("Stack Usage: %d bytes\n", stack_usage);
-
+        uint32_t stack_usage = (((uint32_t)old_process->user_stack + STACK_SIZE) & ~0xF) - (uint32_t)old_ctx->esp;
+        Logger::serial_log("Stack Usage: %d bytes\n", stack_usage);
 
         Logger::serial_log("Saved context for process PID %d \n", old_process->pid);
-        //print_interrupt_frame(&old_process->context); // Pass the context directly
+        print_interrupt_frame(&old_process->context); // Pass the context directly
         Logger::serial_log("Saved ESP: 0x%x \n", old_process->context.esp);
     }
 
@@ -208,20 +206,17 @@ void schedule(interrupt_frame* interrupt_frame) {
     // Load the new process's context
     if (next_process) {
         Logger::serial_log("Loading process PID %d \n", next_process->pid);
-        //print_interrupt_frame(&next_process->context);
+        print_interrupt_frame(&next_process->context);
 
         Logger::serial_log("Loading ESP: 0x%x \n", next_process->context.esp);
 
 
         uint32_t kernel_stack_top = next_process->kernel_esp;
-        //tss_set_stack(kernel_stack_top);
+        tss_set_stack(kernel_stack_top);
+        Logger::serial_log("TSS Stack set to 0x%x\n", kernel_stack_top);
 
         next_process->state = RUNNING;  // Mark the next process as RUNNING
         current_process = next_process;
-
-        Logger::serial_log("Switching to PID %d (Ring %d)\n", 
-                          next_process->pid, 
-                          next_process->is_kernel_mode ? 0 : 3);
 
         load_context(&next_process->context); // Load the context of the next process
     }
