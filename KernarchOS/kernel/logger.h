@@ -22,33 +22,20 @@ public:
     template <typename... Args>
     static void log(LogLevel level, const char* format, Args... args) {
         if (level >= currentLogLevel) {
-            uint8_t oldColor = get_terminal_color();
-            set_log_color(level);
-
             char buffer[256];  // Adjust size as needed
             int length = format_string(buffer, sizeof(buffer), format, args...);
 
-            term_print(getLogLevelPrefix(level));
-            term_print(buffer);
-            term_print("\n");
-
-            restore_color(oldColor);
+            term_printf("&%x%s %s\n", get_log_color(level), getLogLevelPrefix(level), buffer);
         }
     }
 
     template <typename... Args>
     static void logn(LogLevel level, const char* format, Args... args) {
         if (level >= currentLogLevel) {
-            uint8_t oldColor = get_terminal_color();
-            set_log_color(level);
-
             char buffer[256];  // Adjust size as needed
             int length = format_string(buffer, sizeof(buffer), format, args...);
 
-            term_print(getLogLevelPrefix(level));
-            term_print(buffer);
-
-            restore_color(oldColor);
+            term_printf("&%x%s %s", get_log_color(level), getLogLevelPrefix(level), buffer);
         }
     }
 
@@ -97,32 +84,24 @@ private:
 
     static const char* getLogLevelPrefix(LogLevel level) {
         switch (level) {
-            case DEBUG:   return "[DEBUG] ";
-            case INFO:    return "[INFO] ";
-            case WARNING: return "[WARNING] ";
-            case ERROR:   return "[ERROR] ";
-            case CRITICAL:return "[CRITICAL] ";
-            default:      return "[UNKNOWN] ";
+            case DEBUG:     return "[DEBUG]";
+            case INFO:      return "[INFO]";
+            case WARNING:   return "[WARNING]";
+            case ERROR:     return "[ERROR]";
+            case CRITICAL:  return "[CRITICAL]";
+            default:        return "[UNKNOWN]";
         }
     }
 
-    static void set_log_color(LogLevel level) {
+    static const uint8_t get_log_color(LogLevel level) {
         switch (level) {
-            case DEBUG:    set_text_color(VGA_LIGHT_GRAY); break;
-            case INFO:     set_text_color(VGA_LIGHT_GREEN); break;
-            case WARNING:  set_text_color(VGA_YELLOW); break;
-            case ERROR:    set_text_color(VGA_LIGHT_RED); break;
-            case CRITICAL: 
-                set_text_color(VGA_WHITE); 
-                set_text_bg_color(VGA_RED); 
-                break;
-            default:       set_text_color(VGA_WHITE); break; // Default case
+            case DEBUG:     return VGA_LIGHT_GRAY;
+            case INFO:      return VGA_LIGHT_GREEN;
+            case WARNING:   return VGA_YELLOW;
+            case ERROR:     return VGA_LIGHT_RED;
+            case CRITICAL:  return VGA_MAGENTA;
+            default:        return VGA_WHITE; // Default case
         }
-    }
-
-    static void restore_color(uint8_t color) {
-        set_text_color(color & 0x0F);
-        set_text_bg_color((color >> 4) & 0x0F);
     }
 
 };

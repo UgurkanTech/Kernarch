@@ -187,7 +187,13 @@ void term_print(const char* str) {
         if (str[i] == '&' && str[i + 1] != '\0') {
             // Check if next character is a digit between 0-9
             if (str[i + 1] >= '0' && str[i + 1] <= '9') {
-                uint8_t color = str[i + 1] - '0';  // Convert char to number
+                uint8_t color = str[i + 1] - '0';  // Convert char to number (0-9)
+                term_color = (term_color & 0xF0) | (color & 0x0F);  // Update foreground color
+                i++;  // Skip the color code character
+                continue;
+            }
+            else if (str[i + 1] >= 'a' && str[i + 1] <= 'f') {
+                uint8_t color = str[i + 1] - 'a' + 10;  // Convert 'a'-'f' to 10-15
                 term_color = (term_color & 0xF0) | (color & 0x0F);  // Update foreground color
                 i++;  // Skip the color code character
                 continue;
@@ -296,33 +302,4 @@ void term_clear() {
     print_col = 0;
     print_row = 0;
     mutex.unlock();
-}
-
-void set_text_color(uint8_t color) {
-    mutex.lock();
-    term_color = (term_color & 0xF0) | (color & 0x0F);
-    mutex.unlock();
-}
-
-void set_text_bg_color(uint8_t color) {
-    mutex.lock();
-    term_color = (term_color & 0x0F) | ((color & 0x0F) << 4);
-    mutex.unlock();
-}
-
-//Not thread safe colors..
-void term_print_colored(const char* str, vga_color fg_color, vga_color bg_color) {
-    if (!str) return;
-    
-    const uint8_t saved_color = term_color;
-    
-    term_color = ((bg_color & 0x0F) << 4) | (fg_color & 0x0F);
-    
-    term_print(str);
-    
-    term_color = saved_color;
-}
-
-uint8_t get_terminal_color() {
-    return term_color;
 }
