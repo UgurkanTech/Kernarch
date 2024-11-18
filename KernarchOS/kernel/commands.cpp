@@ -3,6 +3,7 @@
 #include "cstring.h"
 #include "memory.h"
 #include "io.h"
+#include "interrupts.h"
 
 using namespace std;
 
@@ -33,34 +34,27 @@ void Commands::execute(const char* command) {
             return;
         }
     }
-    term_print_colored("\nUnknown command: ", VGA_LIGHT_RED);
-    term_printf("%s \n", command);
-
+    sys_printf("\n&4Unknown command: &1%s \n", command);
 }
 
 void Commands::help() {
-    term_print_colored("\nAvailable commands:\n", VGA_YELLOW);
+    sys_printf("\n&2Available commands:\n");
     for (int i = 0; i < command_count; i++) {
-        term_print("  ");
-        term_print_colored(command_list[i].name, VGA_LIGHT_GREEN);
+        sys_printf("  &3%s", command_list[i].name);
         if (strlen(command_list[i].args) > 0) {
-            term_print(" ");
-            term_print_colored(command_list[i].args, VGA_LIGHT_CYAN);
+            sys_printf(" &2%s", command_list[i].args);
         }
-        term_print(" - ");
-        term_print_colored(command_list[i].description, VGA_WHITE);
-        term_print("\n");
+        sys_printf(" &3- &4%s\n", command_list[i].description);
     }
 }
-
 // Implement your command functions here
 void Commands::echo(const char* args) {
-    term_printf("%s \n", args);
+    sys_printf("&3%s \n", args);
 }
 
 
 void Commands::systeminfo(const char*) {
-    term_print("Unknown\n");
+    sys_printf("&4Unknown\n");
 }
 
 void Commands::clear(const char* args) {
@@ -70,13 +64,13 @@ void Commands::clear(const char* args) {
 
 void Commands::meminfo(const char* args) {
     (void)args;
-    term_print("\n");
+    sys_printf("\n");
     print_memory_info();
 }
 
 void Commands::shutdown(const char* args) {
     (void)args;
-    term_print("Shutting down...\n");
+    sys_printf("&1Shutting down...\n");
 
     // Try ACPI shutdown
     outw(0xB004, 0x2000);
@@ -99,7 +93,7 @@ void Commands::shutdown(const char* args) {
     outb(0x64, 0xFE);
 
     // If all else fails, halt the CPU
-    term_print("Failed to shut down. Halting CPU.\n");
+    sys_printf("&4Failed to shut down. Halting CPU.\n");
     for (;;) {
         asm volatile ("cli");
         asm volatile ("hlt");
