@@ -1,6 +1,6 @@
 # Kernarch - created by Uğurkan Hoşgör
 
-This is a work-in-progress operating system kernel being developed with a specific purpose in mind. As part of an ongoing journey in OS development, it's a creative playground where new concepts and skills are discovered.
+This is a work-in-progress operating system Micro-kernel being developed with a specific purpose in mind. As part of an ongoing journey in OS development, it's a creative playground where new concepts and skills are discovered.
 
 To streamline the build process, Docker is used to compile the kernel and create .iso images. This approach ensures a consistent and isolated environment, making the development process more efficient and reproducible.
 
@@ -10,7 +10,7 @@ To streamline the build process, Docker is used to compile the kernel and create
 
 ## Current Features
 
-Project Status: [■■■■■■■■■------------------------] 40% Complete
+Project Status: [■■■■■■■■■■-----------------------] 50% Complete
 
 
 | **Feature**                              | **Status**          |
@@ -30,13 +30,13 @@ Project Status: [■■■■■■■■■------------------------] 40% Comple
 | Paging                                   | ✔️   |
 | User Mode                                | ✔️   |
 | Process Scheduling                       | ✔️   |
+| Multitasking Support                     | 🟡   |
+| System Calls                             | 🟡   |
 | IDE Harddisk Driver (FAT32)              | 🟡   |
 | C Standard Library                       | ❌   |
-| System Calls                             | ❌   |
 | VirtIO Drivers                           | ❌   |
 | Networking Capabilities                  | ❌   |
 | Graphical User Interface (GUI)           | ❌   |
-| Multitasking Support                     | ❌   |
 
 
 
