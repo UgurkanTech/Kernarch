@@ -30,31 +30,32 @@ void Commands::execute(const char* command) {
     for (int i = 0; i < command_count; i++) {
         size_t cmd_len = strlen(command_list[i].name);
         if (strncmp(command, command_list[i].name, cmd_len) == 0 && (command[cmd_len] == ' ' || command[cmd_len] == '\0')) {
+            sys_printf(">&f%s\n",command);
             command_list[i].function(command + cmd_len + 1);
             return;
         }
     }
-    sys_printf("\n&4Unknown command: &1%s \n", command);
+    sys_printf("\n&4Unknown command: &f%s \n", command);
 }
 
 void Commands::help() {
-    sys_printf("\n&2Available commands:\n");
+    sys_printf("&aAvailable commands:\n");
     for (int i = 0; i < command_count; i++) {
-        sys_printf("  &3%s", command_list[i].name);
+        sys_printf("  &b%s", command_list[i].name);
         if (strlen(command_list[i].args) > 0) {
-            sys_printf(" &2%s", command_list[i].args);
+            sys_printf(" &c%s", command_list[i].args);
         }
-        sys_printf(" &3- &4%s\n", command_list[i].description);
+        sys_printf(" &f- &7%s\n", command_list[i].description);
     }
 }
+
 // Implement your command functions here
 void Commands::echo(const char* args) {
-    sys_printf("&3%s \n", args);
+    sys_printf("&a%s \n", args);
 }
 
-
 void Commands::systeminfo(const char*) {
-    sys_printf("&4Unknown\n");
+    sys_printf("&cUnknown\n");
 }
 
 void Commands::clear(const char* args) {
