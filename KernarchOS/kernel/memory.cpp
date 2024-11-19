@@ -155,7 +155,8 @@ void* kmalloc(size_t size) {
     term_print("\n");
 
     // Trigger software interrupt for out of memory
-    trigger_interrupt(INT_OUT_OF_MEMORY);
+    
+    //trigger_interrupt(INT_OUT_OF_MEMORY); //FIX THIS!
 
     return nullptr;
 }
