@@ -66,25 +66,19 @@ PCB* create_process(void (*entry_point)()) {
     pcb->pid = next_pid++;
     pcb->state = READY;
     pcb->priority = 1;
+    pcb->fpu_state = nullptr;
 
         // Initialize context
     memset(&pcb->context, 0, sizeof(interrupt_frame));
 
     // Always allocate kernel stack for both Ring 0 and Ring 3
-    pcb->kernel_stack = allocate_stack();
-    uint32_t kernel_stack_top = (uint32_t)pcb->kernel_stack + STACK_SIZE;
-    kernel_stack_top &= ~0xF;  // 16-byte align
-
-    // Store kernel ESP in PCB for interrupt handling
-    pcb->kernel_esp = kernel_stack_top;
+    //pcb->kernel_stack = StackManager::allocate_stack(STACK_SIZE); // Not used for now
 
     // Always allocate user/task stack for both Ring 0 and Ring 3
-    pcb->user_stack = allocate_stack();
-    uint32_t user_stack_top = (uint32_t)pcb->user_stack + STACK_SIZE;
-    user_stack_top &= ~0xF;  // 16-byte align
+    pcb->user_stack  = StackManager::allocate_stack(STACK_SIZE);
 
-    pcb->context.esp = user_stack_top;  // Task will run on its "user" stack
-    pcb->context.ebp = user_stack_top;  // Initial stack frame
+    pcb->context.esp = pcb->user_stack->top;
+    pcb->context.ebp = pcb->user_stack->top;  // Initial stack frame
     
     // Set up registers - always use task stack as main stack
     pcb->context.eip = (uint32_t)entry_point;
@@ -205,15 +199,16 @@ void schedule(interrupt_frame* interrupt_frame) {
 
     // Load the new process's context
     if (next_process) {
+        //Stack calculation before switching
+        StackManager::get_stack_usage(old_process->user_stack, interrupt_frame->esp);
+
         Logger::serial_log("Loading process PID %d \n", next_process->pid);
         print_interrupt_frame(&next_process->context);
 
         Logger::serial_log("Loading ESP: 0x%x \n", next_process->context.esp);
 
-
-        uint32_t kernel_stack_top = next_process->kernel_esp;
-        tss_set_stack(kernel_stack_top);
-        Logger::serial_log("TSS Stack set to 0x%x\n", kernel_stack_top);
+        //tss_set_stack(next_process->kernel_stack->top); //not needed for now
+        //Logger::serial_log("TSS Stack set to 0x%x\n", next_process->kernel_stack->top);
 
         next_process->state = RUNNING;  // Mark the next process as RUNNING
         current_process = next_process;
@@ -224,15 +219,6 @@ void schedule(interrupt_frame* interrupt_frame) {
     Logger::serial_log("scheduler end reached !?!?");
 }
 
-uint32_t allocate_stack() {
-    void* stack = kmalloc(STACK_SIZE);
-    if (!stack) {
-        Logger::log(LogLevel::ERROR, "Failed to allocate stack");
-        return 0;
-    }
-    return (uint32_t)stack;
-}
-
 
 void terminate_current_process() {
     if (current_process && current_process->pid != 0) {  // Don't terminate idle process
@@ -240,13 +226,17 @@ void terminate_current_process() {
         
         // Free process resources
         if (current_process->kernel_stack) {
-            kfree((void*)current_process->kernel_stack);
+            StackManager::destroy_stack(current_process->kernel_stack);
             current_process->kernel_stack = NULL;
         }
         if (current_process->user_stack) {
-            kfree((void*)current_process->user_stack);
+            StackManager::destroy_stack(current_process->user_stack);
             current_process->user_stack = NULL;
         }
+        if (current_process->fpu_state) {
+            aligned_kfree(current_process->fpu_state);
+        }
+
         Logger::log(LogLevel::INFO, "Terminated process PID %d", current_process->pid);
         
         current_process = nullptr;
