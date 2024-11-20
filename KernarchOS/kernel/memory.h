@@ -13,6 +13,8 @@ void multiboot_scan(multiboot_info_t* mbd, unsigned int magic);
 
 void* kmalloc(size_t size);
 void kfree(void* ptr);
+void* aligned_kmalloc(size_t alignment, size_t size);
+void aligned_kfree(void* ptr);
 void* krealloc(void* ptr, size_t new_size);
 void print_heap_info();
 void print_memory_info();

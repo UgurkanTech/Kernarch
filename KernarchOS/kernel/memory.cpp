@@ -161,6 +161,41 @@ void* kmalloc(size_t size) {
     return nullptr;
 }
 
+void* aligned_kmalloc(size_t alignment, size_t size) {
+    if (alignment == 0 || (alignment & (alignment - 1)) != 0) {
+        // Alignment must be a power of 2
+        return nullptr;
+    }
+
+    // Allocate extra space for alignment and storing the original pointer
+    size_t total_size = size + alignment + sizeof(void*);
+    void* original_ptr = kmalloc(total_size);
+    if (!original_ptr) {
+        return nullptr;
+    }
+
+    // Calculate aligned address
+    uintptr_t original_addr = (uintptr_t)original_ptr;
+    uintptr_t aligned_addr = (original_addr + sizeof(void*) + alignment - 1) & ~(alignment - 1);
+    
+    // Store the original pointer right before the aligned memory
+    void** storage = (void**)(aligned_addr - sizeof(void*));
+    *storage = original_ptr;
+
+    return (void*)aligned_addr;
+}
+
+void aligned_kfree(void* ptr) {
+    if (!ptr) return;
+
+    // Get the original pointer from before the aligned memory
+    void** storage = (void**)((uintptr_t)ptr - sizeof(void*));
+    void* original_ptr = *storage;
+
+    // Free the original allocation
+    kfree(original_ptr);
+}
+
 void kfree(void* ptr) {
     if (!ptr) return;
 
