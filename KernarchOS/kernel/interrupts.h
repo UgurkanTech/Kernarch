@@ -11,15 +11,15 @@
 // Software Interrupts (custom to kernel)
 enum SoftwareInterrupt {
     SYSCALL_PRINT = 1,
-    SYSCALL_CLEAR
+    SYSCALL_READ,
+    SYSCALL_CLEAR,
+    SYSCALL_EXIT
 };
-
-inline void trigger_interrupt(uint8_t interrupt_number) {
-    asm volatile ("int %0" : : "N" (interrupt_number));
-}
 
 // Function prototype for printf system call
 void sys_printf(const char* format, ...);
+char sys_read();
+void sys_clear();
 
 void syscall_handler(interrupt_frame* frame);
 
