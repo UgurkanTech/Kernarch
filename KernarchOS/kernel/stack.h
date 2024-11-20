@@ -25,6 +25,7 @@ public:
     // Stack validation
     static bool is_valid_stack(Stack* stack);
     static bool is_address_in_stack(Stack* stack, uint32_t addr);
+    static bool is_stack_safe(Stack* stack, uint32_t current_esp);
 
 private:
     static const uint32_t STACK_ALIGN = 16;        // Stack alignment in bytes

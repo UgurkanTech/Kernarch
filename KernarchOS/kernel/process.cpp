@@ -112,6 +112,11 @@ void schedule(interrupt_frame* interrupt_frame) {
 
     PCB* old_process = current_process;
     PCB* next_process = nullptr;
+
+    if(old_process && !StackManager::is_stack_safe(old_process->user_stack, interrupt_frame->esp)){
+        Logger::log(LogLevel::ERROR, "Stack overflow detected for process PID %d", old_process->pid);
+        terminate_current_process();
+    }
     
     // Try to find next READY process
     int start_idx = old_process ? (old_process->pid % MAX_PROCESSES) : 0;
@@ -199,9 +204,6 @@ void schedule(interrupt_frame* interrupt_frame) {
 
     // Load the new process's context
     if (next_process) {
-        //Stack calculation before switching
-        StackManager::get_stack_usage(old_process->user_stack, interrupt_frame->esp);
-
         Logger::serial_log("Loading process PID %d \n", next_process->pid);
         print_interrupt_frame(&next_process->context);
 

@@ -62,11 +62,6 @@ void StackManager::destroy_stack(Stack* stack) {
 }
 
 uint32_t StackManager::get_stack_usage(Stack* stack, uint32_t current_esp) {
-    if (!is_valid_stack(stack)) {
-        return 0;
-    }
-
-    // Calculate usage based on current ESP
     if (!is_address_in_stack(stack, current_esp)) {
         return 0;
     }
@@ -76,6 +71,21 @@ uint32_t StackManager::get_stack_usage(Stack* stack, uint32_t current_esp) {
     total_usage += stack->usage;
 
     return stack->usage;
+}
+
+bool StackManager::is_stack_safe(Stack* stack, uint32_t current_esp) {
+    if (!is_address_in_stack(stack, current_esp)) {
+        return false;
+    }
+
+    uint32_t usage = get_stack_usage(stack, current_esp);
+    uint32_t usage_percent = (usage * 100) / stack->size;
+
+    // Check thresholds
+    if (usage_percent >= 90) {
+        return false;
+    }
+    return true;
 }
 
 uint32_t StackManager::get_total_allocated() {
