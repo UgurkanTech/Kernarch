@@ -24,6 +24,20 @@ _start:
     mov ebp, stack_top
     mov esp, stack_top
 
+    ;Enable FPU
+    mov edx, cr0 
+    and edx, 0xFFFFFFFB ; Clear EM bit (bit 2) 
+    mov cr0, edx
+
+    ;Enable SSE
+    mov edx, cr4
+    or edx, 0x00000200    ; Set OSFXSR bit (bit 9)
+    or edx, 0x00000400    ; Set OSXMMEXCPT bit (bit 10)
+    mov cr4, edx
+    
+    ;Initialize FPU
+    fninit;
+
     push eax
     push ebx
     

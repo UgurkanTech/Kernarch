@@ -3,6 +3,7 @@
 
 #include "types.h"
 #include "isr.h"
+#include "stack.h"
 
 #define MAX_PROCESSES 256
 
@@ -29,9 +30,9 @@ struct PCB {
     uint32_t base_address;
     uint32_t limit;
     uint32_t *page_table;
-    uint32_t kernel_stack;
-    uint32_t user_stack;
-    uint32_t kernel_esp;
+    Stack* kernel_stack;
+    Stack* user_stack;
+    uint8_t* fpu_state;
 };
 
 void init_processes();
@@ -40,7 +41,6 @@ void schedule(interrupt_frame* interrupt_frame);
 void terminate_current_process();
 
 void idle_task();
-uint32_t allocate_stack();
 
 extern "C" void load_context(interrupt_frame* context);
 

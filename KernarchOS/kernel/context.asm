@@ -5,6 +5,11 @@ global load_context
 ; Does not return - switches directly to new context
 load_context:
     cli                           ; Ensure interrupts are disabled
+
+    mov eax, cr0          ; Load current CR0 value into EAX
+    or eax, 0x8           ; Set the TS flag (bit 3)
+    mov cr0, eax          ; Store the updated value back into CR0
+
     mov eax, [esp + 4]           ; Get context pointer parameter
     
     ; Load all segment registers first
