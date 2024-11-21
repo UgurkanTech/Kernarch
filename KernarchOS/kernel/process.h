@@ -21,8 +21,9 @@ enum ProcessState {
     TERMINATED
 };
 
+struct Thread;
 
-struct PCB {
+typedef struct PCB {
     uint32_t pid;
     ProcessState state;
     uint32_t priority;
@@ -33,12 +34,13 @@ struct PCB {
     Stack* kernel_stack;
     Stack* user_stack;
     uint8_t* fpu_state;
+    Thread* user_data;
 };
 
 void init_processes();
 PCB* create_process(void (*entry_point)());
 void schedule(interrupt_frame* interrupt_frame);
-void terminate_current_process();
+void terminate_current_process(int return_code = 0);
 
 void idle_task();
 

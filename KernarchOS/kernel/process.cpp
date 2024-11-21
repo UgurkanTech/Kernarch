@@ -7,6 +7,8 @@
 #include "tss.h"
 #include "io.h"
 #include "pit.h"
+#include "thread.h"
+#include "interrupts.h"
 
 #define STACK_SIZE 8192 // 8KB stack size
 
@@ -21,21 +23,23 @@ void init_processes() {
         process_table[i].pid = 0;
         process_table[i].state = TERMINATED;
     }
-    
-    // Create an idle process
-    PCB* idle_process = create_process(idle_task);
-    if (idle_process) {
-        idle_process->priority = 0;  // Lowest priority
-        idle_process->state = READY; // Ensure it's ready
-        
-        // Make sure interrupts are enabled in the idle process context
-        idle_process->context.eflags |= 0x200;  // Set IF flag
-        
-        Logger::log(LogLevel::INFO, "Idle process created with PID %d", idle_process->pid);
-    } else {
+
+    Thread* idleThread = ThreadManager::create_thread(idle_task);
+
+    if (idleThread)
+    {
+        idleThread->pcb->priority = 0;
+        idleThread->pcb->state = READY;
+
+        idleThread->pcb->context.eflags |= 0x200;
+
+        Logger::log(LogLevel::INFO, "Idle process created with PID %d", idleThread->pcb->pid);
+    }
+    else
+    {
         Logger::log(LogLevel::ERROR, "Failed to create idle process");
     }
-
+    
     pit_register_scheduler(schedule);
 }
 
@@ -43,7 +47,7 @@ void init_processes() {
 
 void idle_task() {
     while (1) {
-        asm("pause");
+        asm volatile("int $0xFF");
     }
 }
 
@@ -110,39 +114,36 @@ void schedule(interrupt_frame* interrupt_frame) {
     asm volatile("pushf; pop %0" : "=r"(eflags));
     asm volatile("cli");
 
+    if (current_process && current_process->user_data->state == THREAD_TERMINATED)
+    {
+        ThreadManager::exit_thread();
+    }
+
+    // Update sleeping threads
+    ThreadManager::update_sleeping_threads();
+
     PCB* old_process = current_process;
     PCB* next_process = nullptr;
 
     if(old_process && !StackManager::is_stack_safe(old_process->user_stack, interrupt_frame->esp)){
         Logger::log(LogLevel::ERROR, "Stack overflow detected for process PID %d", old_process->pid);
-        terminate_current_process();
+        Logger::log(LogLevel::ERROR, "Stack top: 0x%x, ESP: 0x%x", old_process->user_stack->top, interrupt_frame->esp);
+        //ThreadManager::exit_thread();
     }
     
-    // Try to find next READY process
-    int start_idx = old_process ? (old_process->pid % MAX_PROCESSES) : 0;
+    // Try to find the next READY process
     for (int i = 0; i < MAX_PROCESSES; i++) {
-        int idx = (start_idx + i) % MAX_PROCESSES;
-        if (process_table[idx].state == READY && process_table[idx].priority > 0){
-            next_process = &process_table[idx];
-            break;
-        }
-    }
-
-    // If not READY, maybe one running? Keep it running.
-    if (!next_process) {
-        for (int i = 0; i < MAX_PROCESSES; i++) {
-            if (process_table[i].priority == 1 && process_table[i].state == RUNNING) {
-                if(old_process->pid == process_table[i].pid){
-                    asm volatile("sti");
-                    return;
-                }
-                    
+        int idx = (i + (old_process ? (old_process->pid % MAX_PROCESSES) : 0)) % MAX_PROCESSES;
+        if (process_table[idx].state == READY) {
+            Thread* thread = (Thread*)process_table[idx].user_data;
+            if (thread && ThreadManager::is_thread_ready(thread)) {
+                next_process = &process_table[idx];
                 break;
             }
         }
     }
 
-        // If no READY process, use idle
+    // If no READY process, check for the idle task
     if (!next_process) {
         for (int i = 0; i < MAX_PROCESSES; i++) {
             if (process_table[i].priority == 0 && process_table[i].state == READY) {
@@ -153,9 +154,7 @@ void schedule(interrupt_frame* interrupt_frame) {
     }
 
     if (!next_process) {
-        if (old_process->pid == 0)
-            Logger::log(LogLevel::DEBUG, "System is idle.");
-        else   
+        if (old_process->pid != 0)
             Logger::log(LogLevel::ERROR, "No processes available to execute!");
 
         asm volatile("sti");
@@ -183,12 +182,12 @@ void schedule(interrupt_frame* interrupt_frame) {
     asm volatile ("mov %%esp, %0" : "=r"(esp));
     Logger::serial_log("BEFORE KERNEL ESP: 0x%x \n", esp);
 
-    if (old_process) {
+    if (old_process && old_process->pid != 0) {
         interruptFrame* old_ctx = &old_process->context;    
         *old_ctx = *interrupt_frame;
 
-        old_ctx->ss = 0x23;
-        old_ctx->cs = 0x1B;
+        //old_ctx->ss = 0x23;
+        //old_ctx->cs = 0x1B;
 
         // Calculate stack usage
         uint32_t stack_usage = (((uint32_t)old_process->user_stack + STACK_SIZE) & ~0xF) - (uint32_t)old_ctx->esp;
@@ -204,6 +203,7 @@ void schedule(interrupt_frame* interrupt_frame) {
 
     // Load the new process's context
     if (next_process) {
+        
         Logger::serial_log("Loading process PID %d \n", next_process->pid);
         print_interrupt_frame(&next_process->context);
 
@@ -213,7 +213,7 @@ void schedule(interrupt_frame* interrupt_frame) {
         //Logger::serial_log("TSS Stack set to 0x%x\n", next_process->kernel_stack->top);
 
         next_process->state = RUNNING;  // Mark the next process as RUNNING
-        current_process = next_process;
+        current_process = next_process;        
 
         load_context(&next_process->context); // Load the context of the next process
     }
@@ -221,29 +221,36 @@ void schedule(interrupt_frame* interrupt_frame) {
     Logger::serial_log("scheduler end reached !?!?");
 }
 
-
-void terminate_current_process() {
-    if (current_process && current_process->pid != 0) {  // Don't terminate idle process
-        current_process->state = TERMINATED;
-        
-        // Free process resources
-        if (current_process->kernel_stack) {
-            StackManager::destroy_stack(current_process->kernel_stack);
-            current_process->kernel_stack = NULL;
-        }
-        if (current_process->user_stack) {
-            StackManager::destroy_stack(current_process->user_stack);
-            current_process->user_stack = NULL;
-        }
-        if (current_process->fpu_state) {
-            aligned_kfree(current_process->fpu_state);
-        }
-
-        Logger::log(LogLevel::INFO, "Terminated process PID %d", current_process->pid);
-        
-        current_process = nullptr;
-
-        // Trigger a reschedule to pick the next process
-        schedule(nullptr);
+void terminate_current_process(int return_code) {
+    if (!current_process || current_process->pid == 0) {  // Don't terminate idle process
+        return;
     }
+
+    // Mark as terminated first
+    current_process->state = TERMINATED;
+    
+    // Free process resources
+    if (current_process->kernel_stack) {
+        StackManager::destroy_stack(current_process->kernel_stack);
+        current_process->kernel_stack = nullptr;
+    }
+    if (current_process->user_stack) {
+        StackManager::destroy_stack(current_process->user_stack);
+        current_process->user_stack = nullptr;
+    }
+    if (current_process->fpu_state) {
+        aligned_kfree(current_process->fpu_state);
+        current_process->fpu_state = nullptr;
+    }
+
+    Logger::log(LogLevel::INFO, "Process PID %d terminated with code %d", current_process->pid, return_code);
+    
+    PCB* terminated = current_process;
+    current_process = nullptr;
+
+    // Force a reschedule
+    schedule(nullptr);
+    
+    // Should never reach here
+    while(1) { asm("hlt"); }
 }
