@@ -12,8 +12,14 @@
 #include "keyboard.h"
 #include "multiboot.h"
 
-void terminalProcess();
-void testProcess1();
-void testProcess2();
+//Dummy sleep to slow down the initialization process
+void dummy_sleep(int mul){
+    int a = 1000000 * mul;
+    for (int i = 0; i < a; i++)
+        asm volatile ("nop");
+    return;
+}
 
+void terminalProcess();
+void testThread(const char* name);
 #endif // KERNEL_H
