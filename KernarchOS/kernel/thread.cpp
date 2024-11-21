@@ -25,12 +25,8 @@ Thread* ThreadManager::create_thread(F entry_point, const char* arg) {
     // Check if the function has an argument and its return type
     if (thread->has_arg) {
         // Function with argument
-        if (sizeof(entry_point) == sizeof(void(*)(const char*))) {  // void func(const char*)
+        if (sizeof(entry_point) == sizeof(void(*)(const char*))) { 
             thread->entry_point.entry_void_arg = (void(*)(const char*))entry_point;
-            thread->returns_int = false;
-        } else if (sizeof(entry_point) == sizeof(int(*)(const char*))) {  // int func(const char*)
-            thread->entry_point.entry_int_arg = (int(*)(const char*))entry_point;
-            thread->returns_int = true;
         } else {
             Logger::log(LogLevel::ERROR, "Invalid function signature for entry point with argument");
             delete thread;
@@ -38,12 +34,8 @@ Thread* ThreadManager::create_thread(F entry_point, const char* arg) {
         }
     } else {
         // Function without argument
-        if (sizeof(entry_point) == sizeof(void(*)())) {  // void func()
+        if (sizeof(entry_point) == sizeof(void(*)())) {
             thread->entry_point.entry_void = (void(*)())entry_point;
-            thread->returns_int = false;
-        } else if (sizeof(entry_point) == sizeof(int(*)())) {  // int func()
-            thread->entry_point.entry_int = (int(*)())entry_point;
-            thread->returns_int = true;
         } else {
             Logger::log(LogLevel::ERROR, "Invalid function signature for entry point without argument");
             delete thread;
@@ -69,24 +61,17 @@ void ThreadManager::thread_wrapper() {
         return;
     }
 
-    int ret_code = 0;
+    int32_t ret_code = 0;
     
     // Call appropriate entry point based on type
-    if (thread->returns_int) {
-        if (thread->has_arg) {
-            ret_code = thread->entry_point.entry_int_arg(thread->arg);
-        } else {
-            ret_code = thread->entry_point.entry_int();
-        }
+    if (thread->has_arg) {
+        ret_code = thread->entry_point.entry_int_arg(thread->arg);
     } else {
-        if (thread->has_arg) {
-            thread->entry_point.entry_void_arg(thread->arg);
-        } else {
-            thread->entry_point.entry_void();
-        }
+        ret_code = thread->entry_point.entry_int();
     }
 
     thread->state = THREAD_TERMINATED;
+    thread->return_code = ret_code;
 
     sys_schedule();
     
@@ -100,20 +85,21 @@ template Thread* ThreadManager::create_thread<void(*)(const char*)>(void(*)(cons
 template Thread* ThreadManager::create_thread<int(*)()>(int(*)(), const char*);
 template Thread* ThreadManager::create_thread<int(*)(const char*)>(int(*)(const char*), const char*);
 
-void ThreadManager::exit_thread(int return_code) {
+void ThreadManager::exit_thread(int32_t return_code) {
     if (!current_process) return;
 
     Thread* thread = (Thread*)current_process->user_data;
     if (!thread) return;
 
-    // Store return code
-    thread->return_code = return_code;
-        
+    if (return_code != 0)
+        thread->return_code = return_code;
+    
+    delete current_process->user_data;
     // Clear the user data before process termination
     current_process->user_data = nullptr;
     
     // Now terminate the process with return code
-    terminate_current_process(return_code);
+    terminate_current_process(thread->return_code);
 }
 
 void ThreadManager::sleep(uint32_t milliseconds) {
