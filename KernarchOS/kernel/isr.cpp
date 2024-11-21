@@ -97,6 +97,10 @@ static void handle_exception(uint8_t vector, interrupt_frame* frame) {
             last_fpu_owner = current_process;
         }
         break;
+    case EXC_GENERAL_PROTECTION:
+        term_printf("&cGeneral Protection Fault. Task crashed: %d\n", current_process->pid);
+        terminate_current_process();
+        break;
     default:
         print_interrupt_frame(frame, vector);
         term_printf("Kernel Panic! - %s", exception_messages[vector]);
