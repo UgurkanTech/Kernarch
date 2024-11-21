@@ -4,13 +4,11 @@ This is a work-in-progress operating system Micro-kernel being developed with a 
 
 To streamline the build process, Docker is used to compile the kernel and create .iso images. This approach ensures a consistent and isolated environment, making the development process more efficient and reproducible.
 
-![image](https://github.com/user-attachments/assets/291c86fc-21fc-4c7c-b5d6-f00b59255eac)
-
-
+![demo](https://github.com/user-attachments/assets/c8c93420-0236-41e7-a0ce-25666e9afe6e)
 
 ## Current Features
 
-Project Status: [■■■■■■■■■■-----------------------] 50% Complete
+Project Status: [■■■■■■■■■■■■---------------------] 60% Complete
 
 
 | **Feature**                              | **Status**          |
@@ -30,8 +28,8 @@ Project Status: [■■■■■■■■■■-----------------------] 50% Comp
 | Paging                                   | ✔️   |
 | User Mode                                | ✔️   |
 | Process Scheduling                       | ✔️   |
-| Multitasking Support                     | 🟡   |
-| System Calls                             | 🟡   |
+| System Calls                             | ✔️   |
+| Multitasking Support                     | ✔️   |
 | IDE Harddisk Driver (FAT32)              | 🟡   |
 | C Standard Library                       | ❌   |
 | VirtIO Drivers                           | ❌   |
