@@ -211,7 +211,7 @@ void term_print(const char* str) {
 void term_printf(const char* format, ...) {
     if (!format) return;
 
-    char buffer[256];
+    char buffer[512];
     va_list args;
     va_start(args, format);
     

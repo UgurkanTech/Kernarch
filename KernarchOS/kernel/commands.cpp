@@ -5,6 +5,7 @@
 #include "io.h"
 #include "interrupts.h"
 #include "stack.h"
+#include "thread.h"
 
 using namespace std;
 
@@ -82,8 +83,8 @@ void Commands::stack(const char* args) {
 
 void Commands::shutdown(const char* args) {
     (void)args;
-    sys_printf("&1Shutting down...\n");
-
+    sys_printf("&4Shutting down...\n");
+    sys_sleep(500);
     // Try ACPI shutdown
     outw(0xB004, 0x2000);
 

@@ -39,7 +39,11 @@ void init_processes() {
     {
         Logger::log(LogLevel::ERROR, "Failed to create idle process");
     }
-    
+    //Set up TSS stack
+    uint32_t tss_stack = StackManager::allocate_stack(8192)->top;
+    tss_set_stack(tss_stack);
+    Logger::debug("TSS stack set to 0x%x", tss_stack);
+    //Register the scheduler
     pit_register_scheduler(schedule);
 }
 

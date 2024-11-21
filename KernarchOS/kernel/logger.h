@@ -22,7 +22,7 @@ public:
     template <typename... Args>
     static void log(LogLevel level, const char* format, Args... args) {
         if (level >= currentLogLevel) {
-            char buffer[256];  // Adjust size as needed
+            char buffer[512];  // Adjust size as needed
             int length = format_string(buffer, sizeof(buffer), format, args...);
 
             term_printf("&%x%s %s\n", get_log_color(level), getLogLevelPrefix(level), buffer);
@@ -32,7 +32,7 @@ public:
     template <typename... Args>
     static void logn(LogLevel level, const char* format, Args... args) {
         if (level >= currentLogLevel) {
-            char buffer[256];  // Adjust size as needed
+            char buffer[512];  // Adjust size as needed
             int length = format_string(buffer, sizeof(buffer), format, args...);
 
             term_printf("&%x%s %s", get_log_color(level), getLogLevelPrefix(level), buffer);

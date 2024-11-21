@@ -58,47 +58,40 @@ extern "C" void kernel_main(multiboot_info_t* mbd, unsigned int magic) {
         } else {
             ((void (*)(void*))commands[i].func)(NULL); // Call function without arguments
         }
-        dummy_sleep(10); // Sleep after each command
+        dummy_sleep(100); // Sleep after each command
         Logger::log(LogLevel::DEBUG, "DONE! (%d/%d)", i+1, sizeof(commands) / sizeof(commands[0])); // Log the command execution
     }
-    // Create the terminal thread and test threads
+    // Create the terminal thread
     ThreadManager::create_thread(terminalProcess);
-    ThreadManager::create_thread(testThread, "Test1");
-    ThreadManager::create_thread(testThread, "Test2");
-
-    dummy_sleep(100);
-    tss_set_stack(StackManager::allocate_stack(8192)->top);
     dummy_sleep(100);
     Logger::info("Kernel initialization complete");
-    term_print("Welcome to KernarchOS!\n");
+
+    term_printf(ascii_bytes);
+    Logger::info("&cWelcome to &fK&2e&3r&4n&5a&6r&7c&eh&9O&aS&c!");
     dummy_sleep(100);
+    Logger::info("&7Type &fhelp &7to see available commands");
+
+    //Test
+    //ThreadManager::create_thread(testThread, "Test1");
+    //ThreadManager::create_thread(testThread, "Test2");
 
     schedule(nullptr); //Call schedular which will not return.
 
-    for(;;) asm("hlt");
+    for(;;) asm("hlt"); //This should never be reached
 }
 
-void terminalProcess(){
-    while (true) {
-        char c = sys_read();
-        if (c != '\0')
-            term_input(c);
-        
-        thread_sleep(10);
-    }
-}
 //Temporary test processes
 void testThread(const char* name) {
-    sys_printf("&eStarting %s Process Counting =>\n", name);
-    int a = 0;
+    sys_printf("&eStarting %s Process Async Counting =>\n", name);
+    int a =  name[4] == '2' ? 100 : 0;
     while (true) {
-        a += 1;
+        a++;
         thread_sleep(300);
         uint32_t esp = 0;
         asm volatile ("mov %%esp, %0" : "=r"(esp));
-        if(a % 10 == 0)
+        if(a % 5 == 0)
             return;
-        sys_printf("%s - &3Stack: 0x%x, &7num: %d   \n", name, esp, a);
+        sys_printf("%s - &%sStack: 0x%x, &7num: %d   \n", name, name[4] == '2' ? "3" : "6" , esp, a);
     }
     sys_printf("%d", a);
 }

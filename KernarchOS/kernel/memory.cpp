@@ -23,8 +23,6 @@ struct block_meta {
 static block_meta* heap_start_block = nullptr;
 
 void init_memory() {
-    Logger::log(LogLevel::INFO, "Initializing memory...");
-
     if (kmalloc_size == 0)
     {
         Logger::log(LogLevel::ERROR, "Failed to initialize memory. Is multiboot scanned?");
