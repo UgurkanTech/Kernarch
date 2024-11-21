@@ -21,6 +21,18 @@ section .text
 
 extern isr_handler
 
+null_loop:
+    hlt  ; Halt the CPU until the next interrupt
+    jmp null_loop
+
+; Special handler for interrupt 255 (simply halts the CPU) 
+int_vector_handler_255:
+  cli
+  add esp, 12 ;Check this again
+  sti
+  jmp null_loop
+  iret
+
 interrupt_common:
   call isr_handler
 
@@ -38,7 +50,7 @@ interrupt_common:
   iret
 
 %assign i 0
-%rep 256
+%rep 255
   int_vector_macro i
   %assign i i + 1
 %endrep
