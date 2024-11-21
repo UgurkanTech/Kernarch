@@ -1,6 +1,7 @@
 #include "interrupts.h"
 #include "process.h"
 #include "keyboard.h"
+#include "thread.h"
 
 
 // Parameter types and structure
@@ -25,8 +26,13 @@ void syscall_handler(interrupt_frame* frame) {
     uint32_t syscall_num = frame->eax;
     SyscallParams* call_params = *(SyscallParams**)frame->esp;
 
+    Thread* thread = nullptr;
+    interruptFrame* old_ctx;
     //Create struct from stack pointer
     switch (syscall_num) {
+        case SYSCALL_SCHEDULE:
+            schedule(frame);
+            break;
         case SYSCALL_PRINT:
             term_printf(call_params->params->str);
             break;
@@ -41,6 +47,14 @@ void syscall_handler(interrupt_frame* frame) {
             break;
         case SYSCALL_EXIT:
             term_printf("Process exited with code: %d\n", (int)call_params->params->u);
+            break;
+        case SYSCALL_SLEEP:
+            if (!current_process) return;
+            thread = (Thread*)current_process->user_data;
+            if (!thread) return;
+            thread->state = THREAD_SLEEPING;
+            thread->wake_time = get_current_time_ms() + call_params->params->u;
+            schedule(frame);
             break;
         default:
             term_printf("Failed syscall %d\n", syscall_num);
@@ -81,6 +95,14 @@ static void _syscall(SyscallParams* params) {
     asm volatile ("movl %0, %%eax" : : "r" (saved_eax));
 }
 
+void sys_schedule() {
+    SyscallParams params = {
+        .syscall_num = SYSCALL_SCHEDULE,
+        .param_count = 0
+    };
+
+    _syscall(&params);
+}
 // User space system call functions
 void sys_printf(const char* format, ...) {
     if (!format) return;
@@ -117,6 +139,16 @@ void sys_clear() {
     SyscallParams params = {
         .syscall_num = SYSCALL_CLEAR,
         .param_count = 0
+    };
+
+    _syscall(&params);
+}
+
+void sys_sleep(uint32_t milliseconds) {
+    SyscallParams params = {
+        .syscall_num = SYSCALL_SLEEP,
+        .param_count = 1,
+        .params = {{ .u = milliseconds }}
     };
 
     _syscall(&params);
