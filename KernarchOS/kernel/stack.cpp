@@ -47,6 +47,7 @@ void StackManager::destroy_stack(Stack* stack) {
         Logger::log(LogLevel::ERROR, "Attempt to destroy invalid stack");
         return;
     }
+    uint32_t stack_base = (uint32_t)stack->base_addr;
 
     // Update total allocation tracking
     total_allocated -= stack->size;
@@ -58,7 +59,7 @@ void StackManager::destroy_stack(Stack* stack) {
     // Free the stack structure
     delete stack;
 
-    Logger::log(LogLevel::DEBUG, "Stack destroyed");
+    Logger::log(LogLevel::DEBUG, "Stack destroyed at 0x%x", stack_base);
 }
 
 uint32_t StackManager::get_stack_usage(Stack* stack, uint32_t current_esp) {
@@ -75,12 +76,12 @@ uint32_t StackManager::get_stack_usage(Stack* stack, uint32_t current_esp) {
 
 bool StackManager::is_stack_safe(Stack* stack, uint32_t current_esp) {
     if (!is_address_in_stack(stack, current_esp)) {
+        Logger::error("ESP not in stack: ESP=0x%x, Stack=0x%x-0x%x", current_esp, stack->base_addr, stack->top);
         return false;
     }
 
     uint32_t usage = get_stack_usage(stack, current_esp);
     uint32_t usage_percent = (usage * 100) / stack->size;
-
     // Check thresholds
     if (usage_percent >= 90) {
         return false;

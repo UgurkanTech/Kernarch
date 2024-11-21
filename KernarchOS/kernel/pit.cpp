@@ -34,7 +34,7 @@ uint32_t pit_get_ticks() {
     return pit_ticks;
 }
 
-uint32_t pit_get_milliseconds() {
+uint32_t get_current_time_ms() {
     return (pit_ticks * 1000) / pit_frequency;
 }
 

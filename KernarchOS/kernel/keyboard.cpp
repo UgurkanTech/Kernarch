@@ -59,5 +59,5 @@ char Keyboard::dequeue_char() {
         buffer_start = (buffer_start + 1) % KEYBOARD_BUFFER_SIZE;
         return c;
     }
-    return 0; // Return null character if buffer is empty
+    return '\0'; // Return null character if buffer is empty
 }
