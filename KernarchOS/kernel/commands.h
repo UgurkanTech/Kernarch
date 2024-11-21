@@ -29,6 +29,7 @@ private:
     static void clear(const char* args);
     static void meminfo(const char* args);
     static void systeminfo(const char* args);
+    static void stack(const char* args);
     static void shutdown(const char* args);
 };
 

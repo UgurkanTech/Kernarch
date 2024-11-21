@@ -92,9 +92,7 @@ void multiboot_scan(multiboot_info_t* mbd, unsigned int magic){
         return;
     }
 
-    Logger::log(LogLevel::INFO, "Largest available memory region for kmalloc:");
-    print_memory_size("  Start", kmalloc_start);
-    print_memory_size("  Size", kmalloc_size);
+    Logger::log(LogLevel::INFO, "Largest available memory region for kmalloc: 0x%x, Size: %d bytes", kmalloc_start, kmalloc_size);
 
     return; //Return for now..
 
@@ -260,28 +258,18 @@ void print_heap_info() {
 }
 
 
-uint32_t get_stack_usage() {
-    uint32_t esp;
-    asm volatile("mov %%esp, %0" : "=r" (esp));
-    return (uint32_t)&stack_top - esp;
-}
-
-uint32_t get_total_stack_size() {
-    return (uint32_t)&stack_top - (uint32_t)&stack_bottom;
-}
-
-void print_memory_size(const char* prefix, size_t size) {
-    if (size >= 1024 * 1024) {
-        Logger::log(LogLevel::INFO, "%s: %d MB", prefix, size / (1024 * 1024));
-    } else if (size >= 1024) {
-        Logger::log(LogLevel::INFO, "%s: %d KB", prefix, size / 1024);
+const char* get_memory_unit_text(size_t memory_size, char* buffer, size_t buffer_size) {
+    if (memory_size >= 1024 * 1024) {
+        format_string(buffer, buffer_size, "%d MB", memory_size / (1024 * 1024));
+    } else if (memory_size >= 1024) {
+        format_string(buffer, buffer_size, "%d KB", memory_size / 1024);
     } else {
-        Logger::log(LogLevel::INFO, "%s: %d bytes", prefix, size);
+        format_string(buffer, buffer_size, "%d bytes", memory_size);
     }
+    return buffer;
 }
 
-void print_memory_info(){
-    Logger::log(LogLevel::INFO, "Memory Information:");
+const char* memory_info(char* buffer, size_t buffer_size) {
     block_meta* current = heap_start_block;
     int block_count = 0;
     size_t free_memory = 0;
@@ -296,17 +284,18 @@ void print_memory_info(){
         }
         current = current->next;
     }
+    size_t total_heap_size = free_memory + used_memory + (block_count * sizeof(block_meta));
 
-    size_t total_heap_size = free_memory + used_memory + block_count * sizeof(block_meta);
+    char unit_buffer1[32];
+    char unit_buffer2[32];
+    char unit_buffer3[32];
 
-    print_memory_size("  Total Heap Size", total_heap_size);
-    print_memory_size("  Used Memory", used_memory);
-    print_memory_size("  Free Memory", free_memory);
-    Logger::log(LogLevel::INFO, "  Block Count: %d", block_count);
-
-    Logger::log(LogLevel::INFO, "Stack Information:");
-    print_memory_size("  Used", get_stack_usage()); //fix this
-    print_memory_size("  Total", get_total_stack_size());
+    format_string(buffer, buffer_size, "&9Total Heap Size: &f%s\n &cUsed Memory: &f%s\n &aFree Memory: &f%s\n &eBlock Count: &f%d", 
+                    get_memory_unit_text(total_heap_size, unit_buffer1, sizeof(unit_buffer1)),
+                    get_memory_unit_text(used_memory, unit_buffer2, sizeof(unit_buffer2)),
+                    get_memory_unit_text(free_memory, unit_buffer3, sizeof(unit_buffer3)),
+                    block_count);
+    return buffer;
 }
 
 // Global new and delete operators

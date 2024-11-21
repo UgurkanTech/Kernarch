@@ -17,10 +17,11 @@ void* aligned_kmalloc(size_t alignment, size_t size);
 void aligned_kfree(void* ptr);
 void* krealloc(void* ptr, size_t new_size);
 void print_heap_info();
-void print_memory_info();
+
 uint32_t get_stack_usage();
 
-void print_memory_size(const char* prefix, size_t size);
+const char* get_memory_unit_text(size_t memory_size, char* buffer, size_t buffer_size);
+const char* memory_info(char* buffer, size_t buffer_size);
 
 // Declare global new and delete operators
 void* operator new(size_t size) noexcept;

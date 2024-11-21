@@ -4,6 +4,7 @@
 #include "memory.h"
 #include "io.h"
 #include "interrupts.h"
+#include "stack.h"
 
 using namespace std;
 
@@ -16,6 +17,7 @@ void Commands::initialize() {
     add_command("clear", "", "Clear the screen", clear);
     add_command("meminfo", "", "Display memory information", meminfo);
     add_command("systeminfo", "", "Display system information", systeminfo);
+    add_command("stack", "", "Display stack information", stack);
     add_command("shutdown", "", "Shut down the system", shutdown);
 }
 
@@ -65,8 +67,17 @@ void Commands::clear(const char* args) {
 
 void Commands::meminfo(const char* args) {
     (void)args;
-    sys_printf("\n");
-    print_memory_info();
+    char buffer[256];
+    sys_printf("%s\n", memory_info(buffer, sizeof(buffer)));
+}
+
+void Commands::stack(const char* args) {
+    (void)args;
+    uint32_t allocated = StackManager::get_total_allocated();
+    uint32_t usage = StackManager::get_total_usage();
+
+    sys_printf("&9Stack Allocated: &f%d bytes, &cUsed: &f%d bytes &e(%d%)\n", allocated, usage, (usage * 100) / allocated);
+    
 }
 
 void Commands::shutdown(const char* args) {
