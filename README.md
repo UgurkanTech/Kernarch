@@ -30,10 +30,10 @@ Project Status: [■■■■■■■■■■■■---------------------] 60% 
 | Process Scheduling                       | ✔️   |
 | System Calls                             | ✔️   |
 | Multitasking Support                     | ✔️   |
-| IDE Harddisk Driver (FAT32)              | 🟡   |
 | C Standard Library                       | ❌   |
-| VirtIO Drivers                           | ❌   |
-| Networking Capabilities                  | ❌   |
+| VirtIO Network Driver                    | ❌   |
+| VirtIO Block Driver                      | ❌   |
+| IDE Drivers                              | ❌   |
 | Graphical User Interface (GUI)           | ❌   |
 
 
