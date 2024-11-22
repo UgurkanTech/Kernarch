@@ -1,10 +1,11 @@
 #include "mutex.h"
 #include "terminal.h"
+#include "interrupts.h"
 
 // Lock the mutex (spinlock until successful)
 void Mutex::lock() {
     while (__atomic_test_and_set(&lockFlag, __ATOMIC_ACQUIRE)) {
-        asm volatile ("int $0x80"); //Yield
+        sys_schedule();
     }
 }
 
