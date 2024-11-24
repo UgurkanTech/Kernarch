@@ -56,6 +56,11 @@ void syscall_handler(interrupt_frame* frame) {
             thread->wake_time = get_current_time_ms() + call_params->params->u;
             schedule(frame);
             break;
+        case SYSCALL_TEST:
+            ThreadManager::create_thread(testThread, "Test1");
+            ThreadManager::create_thread(testThread, "Test2");
+            schedule(frame);
+            break;
         default:
             term_printf("Failed syscall %d\n", syscall_num);
             break;
@@ -152,4 +157,29 @@ void sys_sleep(uint32_t milliseconds) {
     };
 
     _syscall(&params);
+}
+
+void sys_test() {
+    SyscallParams params = {
+        .syscall_num = SYSCALL_TEST,
+        .param_count = 0
+    };
+
+    _syscall(&params);
+}
+
+//Temporary test processes
+void testThread(const char* name) {
+    sys_printf("&eStarting %s Process Async Counting =>\n", name);
+    int a =  name[4] == '2' ? 100 : 0;
+    while (true) {
+        a++;
+        thread_sleep(300);
+        uint32_t esp = 0;
+        asm volatile ("mov %%esp, %0" : "=r"(esp));
+        if(a % 5 == 0)
+            return;
+        sys_printf("%s - &%sStack: 0x%x, &7num: %d   \n", name, name[4] == '2' ? "3" : "6" , esp, a);
+    }
+    sys_printf("%d", a);
 }

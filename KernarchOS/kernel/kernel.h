@@ -32,7 +32,6 @@ void terminalProcess(){
 }
 
 void terminalProcess();
-void testThread(const char* name);
 
 const char ascii_bytes[] = 
 {

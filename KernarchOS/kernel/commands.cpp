@@ -20,6 +20,7 @@ void Commands::initialize() {
     add_command("systeminfo", "", "Display system information", systeminfo);
     add_command("stack", "", "Display stack information", stack);
     add_command("shutdown", "", "Shut down the system", shutdown);
+    add_command("test", "", "Starts Threading test", test);
 }
 
 void Commands::add_command(const char* name, const char* args, const char* description, void (*function)(const char*)) {
@@ -59,6 +60,11 @@ void Commands::echo(const char* args) {
 
 void Commands::systeminfo(const char*) {
     sys_printf("&cUnknown\n");
+}
+
+void Commands::test(const char*) {
+    sys_printf("&cStarting test...\n");
+    sys_test();
 }
 
 void Commands::clear(const char* args) {

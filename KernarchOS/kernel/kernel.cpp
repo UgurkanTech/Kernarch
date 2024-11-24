@@ -80,18 +80,3 @@ extern "C" void kernel_main(multiboot_info_t* mbd, unsigned int magic) {
     for(;;) asm("hlt"); //This should never be reached
 }
 
-//Temporary test processes
-void testThread(const char* name) {
-    sys_printf("&eStarting %s Process Async Counting =>\n", name);
-    int a =  name[4] == '2' ? 100 : 0;
-    while (true) {
-        a++;
-        thread_sleep(300);
-        uint32_t esp = 0;
-        asm volatile ("mov %%esp, %0" : "=r"(esp));
-        if(a % 5 == 0)
-            return;
-        sys_printf("%s - &%sStack: 0x%x, &7num: %d   \n", name, name[4] == '2' ? "3" : "6" , esp, a);
-    }
-    sys_printf("%d", a);
-}

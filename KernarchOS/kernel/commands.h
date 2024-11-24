@@ -31,6 +31,7 @@ private:
     static void systeminfo(const char* args);
     static void stack(const char* args);
     static void shutdown(const char* args);
+    static void test(const char* args);
 };
 
 #endif // COMMANDS_H
