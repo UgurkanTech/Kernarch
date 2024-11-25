@@ -90,12 +90,13 @@ void Commands::stack(const char* args) {
 
 void Commands::about(const char* args) {
     (void)args;
-    sys_printf("&b========================================\n");
-    sys_printf("&b= &eKernarchOS &f- A Simple OS Kernel      &b=\n");
-    sys_printf("&b= &eVersion: &f0.1                         &b=\n");
-    sys_printf("&b= &eAuthor: &fUgurkan Hosgor               &b=\n");
-    sys_printf("&b= &eLicense: &fCC BY-NC-ND 4.0             &b=\n");
-    sys_printf("&b========================================\n");
+    sys_printf(ascii_bytes);
+    sys_printf("&b ===================================================================\n");
+    sys_printf("&b = &eAbout:   &fA Simple OS Kernel                                     &b=\n");
+    sys_printf("&b = &eVersion: &f0.1                                                    &b=\n");
+    sys_printf("&b = &eAuthor:  &fUgurkan Hosgor                                         &b=\n");
+    sys_printf("&b = &eLicense: &fCC BY-NC-ND 4.0                                        &b=\n");
+    sys_printf("&b ===================================================================\n");
 }
 
 void Commands::shutdown(const char* args) {
