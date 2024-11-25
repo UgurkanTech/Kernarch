@@ -28,7 +28,7 @@ void syscall_handler(interrupt_frame* frame) {
 
     Thread* thread = nullptr;
     interruptFrame* old_ctx;
-    //Create struct from stack pointer
+
     switch (syscall_num) {
         case SYSCALL_SCHEDULE:
             schedule(frame);
@@ -113,7 +113,7 @@ void sys_printf(const char* format, ...) {
     if (!format) return;
 
     // Format the string
-    char buffer[256];
+    char buffer[1024];
     va_list args;
     va_start(args, format);
     vformat_string(buffer, sizeof(buffer), format, args);

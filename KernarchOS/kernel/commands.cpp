@@ -21,6 +21,7 @@ void Commands::initialize() {
     add_command("stack", "", "Display stack information", stack);
     add_command("shutdown", "", "Shut down the system", shutdown);
     add_command("test", "", "Starts Threading test", test);
+    add_command("about", "", "About the OS", about);
 }
 
 void Commands::add_command(const char* name, const char* args, const char* description, void (*function)(const char*)) {
@@ -69,7 +70,7 @@ void Commands::test(const char*) {
 
 void Commands::clear(const char* args) {
     (void)args;
-    term_clear();
+    sys_clear();
 }
 
 void Commands::meminfo(const char* args) {
@@ -85,6 +86,16 @@ void Commands::stack(const char* args) {
 
     sys_printf("&9Stack Allocated: &f%d bytes, &cUsed: &f%d bytes &e(%d%)\n", allocated, usage, (usage * 100) / allocated);
     
+}
+
+void Commands::about(const char* args) {
+    (void)args;
+    sys_printf("&b========================================\n");
+    sys_printf("&b= &eKernarchOS &f- A Simple OS Kernel      &b=\n");
+    sys_printf("&b= &eVersion: &f0.1                         &b=\n");
+    sys_printf("&b= &eAuthor: &fUgurkan Hosgor               &b=\n");
+    sys_printf("&b= &eLicense: &fCC BY-NC-ND 4.0             &b=\n");
+    sys_printf("&b========================================\n");
 }
 
 void Commands::shutdown(const char* args) {

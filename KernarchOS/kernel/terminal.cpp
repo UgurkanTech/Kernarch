@@ -211,7 +211,7 @@ void term_print(const char* str) {
 void term_printf(const char* format, ...) {
     if (!format) return;
 
-    char buffer[512];
+    char buffer[1024];
     va_list args;
     va_start(args, format);
     
@@ -226,7 +226,7 @@ void term_printf(const char* format, ...) {
 // Function to print to the last location without scrolling
 void term_printf_fixed(const char* format, ...) {
     if (!format) return;
-    char buffer[256];
+    char buffer[1024];
     va_list args;
     va_start(args, format);
 
