@@ -20,6 +20,6 @@ if exist "%disk_image%" (
     echo File %disk_image% created.
 )
 
-qemu-system-i386 -no-reboot -d pcall,cpu_reset -monitor stdio -serial file:serial_output.log -display default,show-cursor=on -m 2G -netdev user,id=mynet0 -device rtl8139,netdev=mynet0 -cdrom KernarchOS.iso -drive file=disk.img,format=raw,if=ide,index=0
+qemu-system-i386 -no-reboot -d pcall,cpu_reset -monitor stdio -serial file:serial_output.log -display default,show-cursor=on -m 2G -netdev user,id=mynet0 -device virtio-net,netdev=mynet0 -cdrom KernarchOS.iso -drive file=disk.img,format=raw,if=ide,index=0
 
 cd ..
